@@ -1,0 +1,14 @@
+target go-run {
+    run {
+        go run *.go
+    }
+}
+
+target generate {
+    run {
+        for dir in /*/
+        do
+            go generate
+        done
+    }
+}
