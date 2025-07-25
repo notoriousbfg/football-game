@@ -24,7 +24,7 @@ func (p *Pitch) drawHomeTeam(team models.Team) []string {
 	case models.FormationFourThreeThree:
 		rows = make([]string, 4)
 		rows[0] = p.renderRow(team, "three", []models.PlayerPosition{models.LeftWinger, models.Striker, models.RightWinger})
-		rows[1] = p.renderRow(team, "three", []models.PlayerPosition{models.CentralMidfielder, models.CentralMidfielder, models.CentralMidfielder})
+		rows[1] = p.renderRow(team, "three", []models.PlayerPosition{models.CentralMidfielder, models.CentralAttackingMidfieler, models.CentralMidfielder})
 		rows[2] = p.renderRow(team, "four", []models.PlayerPosition{models.LeftBack, models.CentreBack, models.CentreBack, models.RightBack})
 		rows[3] = p.renderRow(team, "one", []models.PlayerPosition{models.Goalkeeper})
 	}
@@ -38,7 +38,7 @@ func (p *Pitch) drawAwayTeam(team models.Team) []string {
 		rows = make([]string, 4)
 		rows[0] = p.renderRow(team, "one", []models.PlayerPosition{models.Goalkeeper})
 		rows[1] = p.renderRow(team, "four", []models.PlayerPosition{models.LeftBack, models.CentreBack, models.CentreBack, models.RightBack})
-		rows[2] = p.renderRow(team, "three", []models.PlayerPosition{models.CentralMidfielder, models.CentralMidfielder, models.CentralMidfielder})
+		rows[2] = p.renderRow(team, "three", []models.PlayerPosition{models.CentralMidfielder, models.CentralAttackingMidfieler, models.CentralMidfielder})
 		rows[3] = p.renderRow(team, "three", []models.PlayerPosition{models.LeftWinger, models.Striker, models.RightWinger})
 
 	}
@@ -85,10 +85,14 @@ func (p *Pitch) renderRow(team models.Team, templateName string, positions []mod
 			Position:   position,
 			Exclusions: foundPlayers, // prevents adding the same place twice
 		})
+		initials := player.Initials()
+		if len(initials) < 2 {
+			initials = fmt.Sprintf("%s ", initials)
+		}
 		bodyStr = strings.Replace(
 			bodyStr,
 			fmt.Sprintf("P%d", i),
-			player.Initials(),
+			initials,
 			1,
 		)
 		foundPlayers[player.Number] = true

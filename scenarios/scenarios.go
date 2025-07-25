@@ -31,7 +31,7 @@ func HomeTeam() models.Team {
 		},
 		Players: []models.Player{
 			{
-				Name:     "Mark Travers",
+				Name:     "Kepa",
 				Number:   1,
 				Position: models.Goalkeeper,
 				Form:     75, Adaptability: 72, Composure: 78,
@@ -79,7 +79,7 @@ func HomeTeam() models.Team {
 				Fitness: models.Fitness{Strength: 70, Agility: 72, InjuryTolerance: 75, InjuryResistance: 77},
 			},
 			{
-				Name:     "Chris Mepham",
+				Name:     "Ilya Zabarnyi",
 				Number:   5,
 				Position: models.CentreBack,
 				Form:     73, Adaptability: 70, Composure: 75,
@@ -103,7 +103,83 @@ func HomeTeam() models.Team {
 				Fitness: models.Fitness{Strength: 78, Agility: 68, InjuryTolerance: 75, InjuryResistance: 80},
 			},
 			{
-				Name:     "Vitalii Mykolenko",
+				Name:         "Dean Huijsen",
+				Position:     models.CentreBack,
+				Number:       15,
+				Form:         78,
+				Adaptability: 80,
+				Composure:    82,
+				Technical: models.TechnicalSkill{
+					Speed:    models.SpeedSkill{Speed: 70, Acceleration: 68},
+					Passing:  models.PassingSkill{ShortPass: 78, LongPass: 80, Cross: 60, Lob: 75, ThroughBall: 70, Chip: 65},
+					Shooting: models.ShootingSkill{Power: 65, Curve: 60, Finish: 58, Spin: 60},
+					Defending: models.DefendingSkill{
+						Jumping:       85,
+						Interceptions: 82,
+						Heading:       models.HeadingSkill{Accuracy: 84, Power: 80},
+						Blocking:      80,
+					},
+					FreeKicks: 50,
+					Penalties: 60,
+				},
+				TacticalIntelligence: models.TacticalIntelligence{
+					Positioning: 80,
+					Vision: models.TacticalVision{
+						Passing:  78,
+						Shooting: 55,
+						Defence:  80,
+					},
+				},
+				Stamina: models.Stamina{
+					Stamina: 76,
+				},
+				Fitness: models.Fitness{
+					Strength:         85,
+					Agility:          72,
+					InjuryTolerance:  78,
+					InjuryResistance: 75,
+				},
+			},
+			{
+				Name:         "Justin Kluivert",
+				Position:     models.RightWinger,
+				Number:       19,
+				Form:         80,
+				Adaptability: 84,
+				Composure:    78,
+				Technical: models.TechnicalSkill{
+					Speed:    models.SpeedSkill{Speed: 90, Acceleration: 92},
+					Passing:  models.PassingSkill{ShortPass: 78, LongPass: 70, Cross: 80, Lob: 72, ThroughBall: 75, Chip: 70},
+					Shooting: models.ShootingSkill{Power: 75, Curve: 80, Finish: 78, Spin: 77},
+					Defending: models.DefendingSkill{
+						Jumping:       65,
+						Interceptions: 60,
+						Heading:       models.HeadingSkill{Accuracy: 60, Power: 62},
+						Blocking:      55,
+					},
+					FreeKicks: 68,
+					Penalties: 70,
+				},
+				TacticalIntelligence: models.TacticalIntelligence{
+					Positioning: 82,
+					Vision: models.TacticalVision{
+						Passing:  78,
+						Shooting: 80,
+						Defence:  60,
+					},
+				},
+				Stamina: models.Stamina{
+					Stamina: 84,
+				},
+				Fitness: models.Fitness{
+					Strength:         70,
+					Agility:          90,
+					InjuryTolerance:  75,
+					InjuryResistance: 78,
+				},
+			},
+			{
+				Name:     "Milos Kerkez",
 				Number:   3,
 				Position: models.LeftBack,
 				Form:     70, Adaptability: 68, Composure: 72,
@@ -175,7 +251,7 @@ func HomeTeam() models.Team {
 				Fitness: models.Fitness{Strength: 68, Agility: 66, InjuryTolerance: 75, InjuryResistance: 72},
 			},
 			{
-				Name:     "Dominic Solanke",
+				Name:     "Evanilson",
 				Number:   9,
 				Position: models.Striker,
 				Form:     76, Adaptability: 73, Composure: 74,
@@ -223,7 +299,7 @@ func HomeTeam() models.Team {
 				Fitness: models.Fitness{Strength: 68, Agility: 70, InjuryTolerance: 72, InjuryResistance: 70},
 			},
 			{
-				Name:     "Jaidon Anthony",
+				Name:     "Dango Ouattara",
 				Number:   11,
 				Position: models.LeftWinger,
 				Form:     73, Adaptability: 70, Composure: 70,
