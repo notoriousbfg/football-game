@@ -1,5 +1,7 @@
 package simulation
 
+import "github.com/notoriousbfg/football-game/models"
+
 //go:generate stringer -type=Interval -output interval_string.go
 type Interval int
 
@@ -10,9 +12,9 @@ const (
 )
 
 type Event struct {
-	Count  int
 	Type   EventType
-	Source interface{}
+	Team   models.Team
+	Player *models.Player
 }
 
 func (e *Event) Log(s *SimulationState) {
@@ -38,8 +40,8 @@ const (
 	Advantage
 	YellowCard
 	RedCard
-	HomeTeamAttacking
-	AwayTeamAttacking
+	Pass
+	GoalScoringChance
 )
 
 type Outcome struct {
@@ -58,11 +60,9 @@ var WeightedGeneralEvents = WeightedEventSet{
 }
 
 var WeightedAttackingEvents = WeightedEventSet{
-	Penalty:           0.01,
-	FreeKickOnGoal:    0.04,
-	Advantage:         0.05,
-	HomeTeamAttacking: 0.05,
-	AwayTeamAttacking: 0.05,
+	Penalty:        0.01,
+	FreeKickOnGoal: 0.04,
+	Advantage:      0.05,
 }
 
 var AllWeightedEvents = mergeWeights(

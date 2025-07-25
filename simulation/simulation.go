@@ -40,26 +40,16 @@ func (sim *Simulation) Run() {
 func (sim *Simulation) runPeriod(start, seconds int) {
 	for i := start; i <= start+seconds; i++ {
 		sim.State.Time = sim.State.Time.Add(time.Second)
-		if evtType := RandomWeightedEvent(AllWeightedEvents, sim.RandomFloat); evtType != EventTypeNone {
-			if trigger, exists := sim.EventTriggers[evtType]; exists {
-				trigger(
-					Event{Type: evtType, Source: sim.eventSource(evtType)},
-					sim.State,
-				)
-			}
-		}
-	}
-}
+		// if evtType := RandomWeightedEvent(AllWeightedEvents, sim.RandomFloat); evtType != EventTypeNone {
+		// 	if trigger, exists := sim.EventTriggers[evtType]; exists {
+		// 		trigger(
+		// 			Event{Type: evtType, Source: sim.eventSource(evtType)},
+		// 			sim.State,
+		// 		)
+		// 	}
+		// }
 
-func (sim *Simulation) eventSource(evt EventType) interface{} {
-	var source interface{}
-	switch evt {
-	case HomeTeamAttacking:
-	case AwayTeamAttacking:
-		// TODO must be a player
-		source = sim.Match
 	}
-	return source
 }
 
 type SimulationState struct {
@@ -83,11 +73,12 @@ type SimulationState struct {
 }
 
 func (s *SimulationState) CaptureEvent(e Event) {
+	s.Events = append(s.Events, e)
+
 	switch e.Type {
 	case YellowCard:
-		if _, ok := e.Source.(models.Player); ok {
-			s.Events = append(s.Events, e)
-		}
+		// TODO is home or away?
+		s.HomeYellowCards++
 	}
 }
 
@@ -111,6 +102,10 @@ func CreateSimulation(home, away models.Team) *Simulation {
 	randGen := rand.New(rand.NewSource(time.Now().UnixNano()))
 	randomFloat := func() float64 { return randGen.Float64() }
 
+	startingPlayer := home.SearchPlayers(models.PlayerSearchOptions{
+		Position: models.Striker | models.CentralMidfielder,
+	})
+
 	state := &SimulationState{
 		HomeScore:         0,
 		AwayScore:         0,
@@ -123,31 +118,36 @@ func CreateSimulation(home, away models.Team) *Simulation {
 		HomeTeamAttacking: false,
 		AwayTeamAttacking: false,
 		Stalemate:         false,
+		Events: []Event{
+			{
+				Type:   Pass,
+				Team:   home,
+				Player: &startingPlayer,
+			},
+		},
 	}
 
 	triggers := make(map[EventType]EventTrigger)
 
-	triggers[YellowCard] = func(e Event, s *SimulationState) {
+	triggers[YellowCard] = func(e Event, s *SimulationState) {}
 
-	}
+	// triggers[HomeTeamAttacking] = func(e Event, s *SimulationState) {
+	// 	if s.evaluateAttack(e, randomFloat) {
+	// 		s.HomeScore++
+	// 		s.HomeMomentum += 0.1
+	// 		s.AwayMomentum -= 0.1
+	// 	}
+	// 	e.Log(s)
+	// }
 
-	triggers[HomeTeamAttacking] = func(e Event, s *SimulationState) {
-		if s.evaluateAttack(e, randomFloat) {
-			s.HomeScore++
-			s.HomeMomentum += 0.1
-			s.AwayMomentum -= 0.1
-		}
-		e.Log(s)
-	}
-
-	triggers[AwayTeamAttacking] = func(e Event, s *SimulationState) {
-		if s.evaluateAttack(e, randomFloat) {
-			s.AwayScore++
-			s.AwayMomentum += 0.1
-			s.HomeMomentum -= 0.1
-		}
-		e.Log(s)
-	}
+	// triggers[AwayTeamAttacking] = func(e Event, s *SimulationState) {
+	// 	if s.evaluateAttack(e, randomFloat) {
+	// 		s.AwayScore++
+	// 		s.AwayMomentum += 0.1
+	// 		s.HomeMomentum -= 0.1
+	// 	}
+	// 	e.Log(s)
+	// }
 
 	return &Simulation{
 		State:             state,

@@ -29,6 +29,9 @@ func (t *Team) SearchPlayers(options PlayerSearchOptions) Player {
 	}
 	scores := make(map[PlayerNumber]PlayerScore, 0)
 	for _, player := range t.Players {
+		if _, found := options.Exclusions[player.Number]; found {
+			continue
+		}
 		score := PlayerScore{
 			Player: player,
 			Score:  0,
@@ -41,9 +44,6 @@ func (t *Team) SearchPlayers(options PlayerSearchOptions) Player {
 		}
 		if player.Number == options.Number {
 			score.Score++
-		}
-		if _, found := options.Exclusions[player.Number]; found {
-			score.Score = 0
 		}
 		scores[player.Number] = score
 	}
@@ -154,6 +154,7 @@ func (p Player) Initials() string {
 
 type PlayerNumber int
 
+//go:generate stringer -type=PlayerPosition -output player_positions_string.go
 type PlayerPosition int
 
 const (

@@ -23,9 +23,10 @@ func (p *Pitch) drawHomeTeam(team models.Team) []string {
 	switch team.Strategy.Formation {
 	case models.FormationFourThreeThree:
 		rows = make([]string, 4)
-		rows[0] = p.renderRow(team, "three", []models.PlayerPosition{models.LeftWinger, models.Striker, models.RightWinger})
-		rows[1] = p.renderRow(team, "three", []models.PlayerPosition{models.CentralMidfielder, models.CentralAttackingMidfieler, models.CentralMidfielder})
-		rows[2] = p.renderRow(team, "four", []models.PlayerPosition{models.LeftBack, models.CentreBack, models.CentreBack, models.RightBack})
+		// TODO fix exclusions
+		rows[0] = p.renderRow(team, "three", []models.PlayerPosition{models.LeftWinger | models.LeftMidfielder, models.Striker, models.RightWinger | models.RightMidfielder})
+		rows[1] = p.renderRow(team, "three", []models.PlayerPosition{models.CentralMidfielder | models.LeftMidfielder, models.CentralAttackingMidfieler, models.CentralMidfielder | models.RightMidfielder})
+		rows[2] = p.renderRow(team, "four", []models.PlayerPosition{models.LeftBack | models.LeftWingBack, models.CentreBack, models.CentreBack, models.RightBack | models.RightWingBack})
 		rows[3] = p.renderRow(team, "one", []models.PlayerPosition{models.Goalkeeper})
 	}
 	return rows
@@ -36,10 +37,11 @@ func (p *Pitch) drawAwayTeam(team models.Team) []string {
 	switch team.Strategy.Formation {
 	case models.FormationFourThreeThree:
 		rows = make([]string, 4)
+		// TODO fix exclusions
 		rows[0] = p.renderRow(team, "one", []models.PlayerPosition{models.Goalkeeper})
-		rows[1] = p.renderRow(team, "four", []models.PlayerPosition{models.LeftBack, models.CentreBack, models.CentreBack, models.RightBack})
-		rows[2] = p.renderRow(team, "three", []models.PlayerPosition{models.CentralMidfielder, models.CentralAttackingMidfieler, models.CentralMidfielder})
-		rows[3] = p.renderRow(team, "three", []models.PlayerPosition{models.LeftWinger, models.Striker, models.RightWinger})
+		rows[1] = p.renderRow(team, "four", []models.PlayerPosition{models.RightBack | models.RightWingBack, models.CentreBack, models.CentreBack, models.LeftBack | models.LeftWingBack})
+		rows[2] = p.renderRow(team, "three", []models.PlayerPosition{models.CentralMidfielder, models.CentralAttackingMidfieler | models.CentralMidfielder, models.CentralMidfielder})
+		rows[3] = p.renderRow(team, "three", []models.PlayerPosition{models.RightWinger | models.RightMidfielder, models.Striker, models.LeftWinger | models.LeftMidfielder})
 
 	}
 	return rows
@@ -79,23 +81,20 @@ func (p *Pitch) renderRow(team models.Team, templateName string, positions []mod
 		panic(err)
 	}
 	bodyStr := string(body)
-	foundPlayers := make(map[models.PlayerNumber]bool, 0)
+	exclusions := make(map[models.PlayerNumber]bool)
 	for i, position := range positions {
 		player := team.SearchPlayers(models.PlayerSearchOptions{
 			Position:   position,
-			Exclusions: foundPlayers, // prevents adding the same place twice
+			Exclusions: exclusions, // prevents adding the same place twice
 		})
 		initials := player.Initials()
-		if len(initials) < 2 {
-			initials = fmt.Sprintf("%s ", initials)
-		}
 		bodyStr = strings.Replace(
 			bodyStr,
 			fmt.Sprintf("P%d", i),
 			initials,
 			1,
 		)
-		foundPlayers[player.Number] = true
+		exclusions[player.Number] = true
 	}
 	return bodyStr
 }
