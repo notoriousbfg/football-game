@@ -37,12 +37,26 @@ func (sim *Simulation) Run() {
 func (sim *Simulation) runPeriod(start, seconds int) {
 	for i := start; i <= start+seconds; i++ {
 		sim.State.Time = sim.State.Time.Add(time.Second)
-		if evtType, ok := randomMatchEvent(sim.RandomFloat); ok {
+		if evtType := RandomWeightedEvent(AllWeightedEvents, sim.RandomFloat); evtType != EventTypeNone {
 			if trigger, exists := sim.EventTriggers[evtType]; exists {
-				trigger(Event{Type: evtType, Source: sim.Comparison}, sim.State)
+				trigger(
+					Event{Type: evtType, Source: sim.eventSource(evtType)},
+					sim.State,
+				)
 			}
 		}
 	}
+}
+
+func (sim *Simulation) eventSource(evt EventType) interface{} {
+	var source interface{}
+	switch evt {
+	case HomeTeamAttacking:
+	case AwayTeamAttacking:
+		// TODO must be a player
+		source = sim.Comparison
+	}
+	return source
 }
 
 type SimulationState struct {
@@ -65,6 +79,15 @@ type SimulationState struct {
 	Outcome             *Outcome
 }
 
+func (s *SimulationState) CaptureEvent(e Event) {
+	switch e.Type {
+	case YellowCard:
+		if _, ok := e.Source.(models.Player); ok {
+			s.Events = append(s.Events, e)
+		}
+	}
+}
+
 func (s *SimulationState) Timestamp() string {
 	duration := s.Time.Sub(s.Start)
 	return fmt.Sprintf("%02d:%02d:%02d", int(duration.Hours()), int(duration.Minutes())%60, int(duration.Seconds())%60)
@@ -76,87 +99,6 @@ type Comparison struct {
 }
 
 type TacticalCounter struct{}
-
-//go:generate stringer -type=Interval -output interval_string.go
-type Interval int
-
-const (
-	Second Interval = iota
-	Minute
-	Hour
-)
-
-type Event struct {
-	Count  int
-	Type   EventType
-	Source Comparison
-}
-
-func (e *Event) Log(s *SimulationState) {
-	fmt.Printf("%s: %s\n", s.Timestamp(), e.Type)
-}
-
-type EventTrigger func(e Event, s *SimulationState)
-
-//go:generate stringer -type=EventType -output event_type_string.go
-type EventType int
-
-const (
-	HalfTimeExtraTimeAnnouncement EventType = iota
-	FullTimeExtraTimeAnnouncement
-	HalfTime
-	FullTime
-	Substitution
-	Penalty
-	FreeKickOnGoal
-	FreeKickDefensiveHalf
-	Foul
-	Advantage
-	YellowCard
-	RedCard
-	HomeTeamAttacking
-	AwayTeamAttacking
-)
-
-type Outcome struct {
-	HomeScore int
-	AwayScore int
-}
-
-func randomMatchEvent(randFloat func() float64) (EventType, bool) {
-	eventProbabilities := map[EventType]float64{
-		Substitution:          0.02,
-		Penalty:               0.01,
-		FreeKickOnGoal:        0.04,
-		FreeKickDefensiveHalf: 0.06,
-		Foul:                  0.10,
-		Advantage:             0.05,
-		YellowCard:            0.06,
-		RedCard:               0.01,
-		HomeTeamAttacking:     0.05,
-		AwayTeamAttacking:     0.05,
-	}
-
-	totalWeight := 0.0
-	for _, weight := range eventProbabilities {
-		totalWeight += weight
-	}
-
-	if randFloat() > totalWeight {
-		return 0, false
-	}
-
-	r := randFloat() * totalWeight
-	acc := 0.0
-	for event, weight := range eventProbabilities {
-		acc += weight
-		if r <= acc {
-			return event, true
-		}
-	}
-
-	return 0, false
-}
 
 func goalChanceEvent() EventType {
 	return FreeKickOnGoal
@@ -182,9 +124,12 @@ func CreateSimulation(home, away models.Team) *Simulation {
 
 	triggers := make(map[EventType]EventTrigger)
 
+	triggers[YellowCard] = func(e Event, s *SimulationState) {
+
+	}
+
 	triggers[HomeTeamAttacking] = func(e Event, s *SimulationState) {
-		comparison := e.Source
-		if evaluateAttack(comparison.H, comparison.A, randomFloat) {
+		if s.evaluateAttack(e, randomFloat) {
 			s.HomeScore++
 			s.HomeMomentum += 0.1
 			s.AwayMomentum -= 0.1
@@ -193,8 +138,7 @@ func CreateSimulation(home, away models.Team) *Simulation {
 	}
 
 	triggers[AwayTeamAttacking] = func(e Event, s *SimulationState) {
-		comparison := e.Source
-		if evaluateAttack(comparison.A, comparison.H, randomFloat) {
+		if s.evaluateAttack(e, randomFloat) {
 			s.AwayScore++
 			s.AwayMomentum += 0.1
 			s.HomeMomentum -= 0.1
@@ -212,9 +156,20 @@ func CreateSimulation(home, away models.Team) *Simulation {
 	}
 }
 
-func evaluateAttack(attacking models.Team, defending models.Team, randFloat func() float64) bool {
-	// rewrite me not using AI
-	return true
+func (s *SimulationState) evaluateAttack(event Event, randFloat func() float64) bool {
+	// get last event
+
+	// get team/player from event source
+
+	// pass, shoot, dribble?
+
+	// evaluate likelihood of chance
+
+	// evaluate likelihood of goal
+
+	// weighted dice roll
+
+	return false
 }
 
 func HomeTeam() models.Team {

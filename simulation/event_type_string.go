@@ -8,25 +8,26 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[HalfTimeExtraTimeAnnouncement-0]
-	_ = x[FullTimeExtraTimeAnnouncement-1]
-	_ = x[HalfTime-2]
-	_ = x[FullTime-3]
-	_ = x[Substitution-4]
-	_ = x[Penalty-5]
-	_ = x[FreeKickOnGoal-6]
-	_ = x[FreeKickDefensiveHalf-7]
-	_ = x[Foul-8]
-	_ = x[Advantage-9]
-	_ = x[YellowCard-10]
-	_ = x[RedCard-11]
-	_ = x[HomeTeamAttacking-12]
-	_ = x[AwayTeamAttacking-13]
+	_ = x[EventTypeNone-0]
+	_ = x[HalfTimeExtraTimeAnnouncement-1]
+	_ = x[FullTimeExtraTimeAnnouncement-2]
+	_ = x[HalfTime-3]
+	_ = x[FullTime-4]
+	_ = x[Substitution-5]
+	_ = x[Penalty-6]
+	_ = x[FreeKickOnGoal-7]
+	_ = x[FreeKickDefensiveHalf-8]
+	_ = x[Foul-9]
+	_ = x[Advantage-10]
+	_ = x[YellowCard-11]
+	_ = x[RedCard-12]
+	_ = x[HomeTeamAttacking-13]
+	_ = x[AwayTeamAttacking-14]
 }
 
-const _EventType_name = "HalfTimeExtraTimeAnnouncementFullTimeExtraTimeAnnouncementHalfTimeFullTimeSubstitutionPenaltyFreeKickOnGoalFreeKickDefensiveHalfFoulAdvantageYellowCardRedCardHomeTeamAttackingAwayTeamAttacking"
+const _EventType_name = "NoneHalfTimeExtraTimeAnnouncementFullTimeExtraTimeAnnouncementHalfTimeFullTimeSubstitutionPenaltyFreeKickOnGoalFreeKickDefensiveHalfFoulAdvantageYellowCardRedCardHomeTeamAttackingAwayTeamAttacking"
 
-var _EventType_index = [...]uint8{0, 29, 58, 66, 74, 86, 93, 107, 128, 132, 141, 151, 158, 175, 192}
+var _EventType_index = [...]uint8{0, 4, 33, 62, 70, 78, 90, 97, 111, 132, 136, 145, 155, 162, 179, 196}
 
 func (i EventType) String() string {
 	if i < 0 || i >= EventType(len(_EventType_index)-1) {
