@@ -1,9 +1,5 @@
 package simulation
 
-import (
-	"fmt"
-)
-
 //go:generate stringer -type=Interval -output interval_string.go
 type Interval int
 
@@ -20,7 +16,7 @@ type Event struct {
 }
 
 func (e *Event) Log(s *SimulationState) {
-	fmt.Printf("%s: %s\n", s.Timestamp(), e.Type)
+	// fmt.Printf("%s: %s\n", s.Timestamp(), e.Type)
 }
 
 type EventTrigger func(e Event, s *SimulationState)

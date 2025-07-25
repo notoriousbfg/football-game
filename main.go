@@ -3,13 +3,14 @@ package main
 import (
 	"fmt"
 
+	"github.com/notoriousbfg/football-game/scenarios"
 	"github.com/notoriousbfg/football-game/simulation"
 )
 
 func main() {
 	sim := simulation.CreateSimulation(
-		simulation.HomeTeam(),
-		simulation.AwayTeam(),
+		scenarios.HomeTeam(),
+		scenarios.AwayTeam(),
 	)
 
 	sim.Run()

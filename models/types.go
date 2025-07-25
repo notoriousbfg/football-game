@@ -1,5 +1,10 @@
 package models
 
+import (
+	"fmt"
+	"strings"
+)
+
 type Team struct {
 	Name      string
 	Strategy  Strategy
@@ -8,6 +13,54 @@ type Team struct {
 	Chemistry int
 	Players   []Player
 	Training  Training
+}
+
+type PlayerSearchOptions struct {
+	Position   PlayerPosition
+	Name       string
+	Number     PlayerNumber
+	Exclusions map[PlayerNumber]bool
+}
+
+func (t *Team) SearchPlayers(options PlayerSearchOptions) Player {
+	type PlayerScore struct {
+		Player Player
+		Score  int
+	}
+	scores := make(map[PlayerNumber]PlayerScore, 0)
+	for _, player := range t.Players {
+		score := PlayerScore{
+			Player: player,
+			Score:  0,
+		}
+		if player.Position == options.Position {
+			score.Score++
+		}
+		if player.Name == options.Name {
+			score.Score++
+		}
+		if player.Number == options.Number {
+			score.Score++
+		}
+		if _, found := options.Exclusions[player.Number]; found {
+			score.Score = 0
+		}
+		scores[player.Number] = score
+	}
+	var highest *PlayerScore
+	for _, score := range scores {
+		if highest == nil {
+			highest = &score
+			continue
+		}
+		if score.Score > highest.Score {
+			highest = &score
+		}
+	}
+	if highest == nil {
+		panic(fmt.Errorf("no player found with options (%v)", options))
+	}
+	return highest.Player
 }
 
 type Strategy struct {
@@ -70,6 +123,8 @@ const (
 )
 
 type Player struct {
+	Name                 string
+	Position             PlayerPosition
 	Number               PlayerNumber
 	Form                 int
 	Adaptability         int
@@ -80,7 +135,38 @@ type Player struct {
 	Fitness              Fitness
 }
 
+func (p Player) Initials() string {
+	words := strings.Fields(p.Name)
+	initials := ""
+	for _, word := range words {
+		if len(word) > 0 {
+			initials += strings.ToUpper(string(word[0]))
+		}
+	}
+	return initials
+}
+
 type PlayerNumber int
+
+type PlayerPosition int
+
+const (
+	Goalkeeper PlayerPosition = iota
+	RightBack
+	RightWingBack
+	CentreBack
+	LeftBack
+	LeftWingBack
+	LeftMidfielder
+	LeftWinger
+	CentralMidfielder
+	CentralDefensiveMidfielder
+	CentralAttackingMidfieler
+	CentreForward
+	RightMidfielder
+	RightWinger
+	Striker
+)
 
 type TechnicalSkill struct {
 	Speed     SpeedSkill
