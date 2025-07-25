@@ -138,10 +138,16 @@ type Player struct {
 func (p Player) Initials() string {
 	words := strings.Fields(p.Name)
 	initials := ""
+	if len(words) > 2 {
+		words = []string{words[0], words[len(words)-1]}
+	}
 	for _, word := range words {
 		if len(word) > 0 {
 			initials += strings.ToUpper(string(word[0]))
 		}
+	}
+	if len(initials) < 2 {
+		initials = fmt.Sprintf("%s ", initials)
 	}
 	return initials
 }
