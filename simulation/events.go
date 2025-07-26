@@ -12,14 +12,14 @@ const (
 )
 
 type Event struct {
-	Type   EventType
-	Team   models.Team
-	Player *models.Player
+	Type            EventType
+	Team            models.Team
+	StartingPlayer  *models.Player
+	FinishingPlayer *models.Player
+	EventMeta       EventMeta
 }
 
-func (e *Event) Log(s *SimulationState) {
-	// fmt.Printf("%s: %s\n", s.Timestamp(), e.Type)
-}
+type EventMeta map[string]interface{}
 
 type EventTrigger func(e Event, s *SimulationState)
 
@@ -27,21 +27,34 @@ type EventTrigger func(e Event, s *SimulationState)
 type EventType int
 
 const (
-	EventTypeNone EventType = iota
-	HalfTimeExtraTimeAnnouncement
-	FullTimeExtraTimeAnnouncement
-	HalfTime
-	FullTime
-	Substitution
-	Penalty
-	FreeKickOnGoal
-	FreeKickDefensiveHalf
-	Foul
-	Advantage
-	YellowCard
-	RedCard
-	Pass
-	GoalScoringChance
+	ETNone EventType = iota
+	ETHalfTimeExtraTimeAnnouncement
+	ETFullTimeExtraTimeAnnouncement
+	ETHalfTime
+	ETFullTime
+	ETSubstitution
+	ETPenalty
+	ETFreeKickOnGoal
+	ETFreeKickDefensiveHalf
+	ETFoul
+	ETAdvantage
+	ETYellowCard
+	ETRedCard
+	ETPass
+	ETGoalScoringChance
+	ETInterception
+)
+
+//go:generate stringer -type=Decision -output decision_string.go
+type Decision int
+
+const (
+	NoDecision Decision = iota
+	DecisionLongPass
+	DecisionShortPass
+	DecisionCross
+	DecisionDribble
+	DecisionShoot
 )
 
 type Outcome struct {
@@ -52,17 +65,17 @@ type Outcome struct {
 type WeightedEventSet map[EventType]float64
 
 var WeightedGeneralEvents = WeightedEventSet{
-	Substitution:          0.02,
-	Foul:                  0.10,
-	YellowCard:            0.06,
-	RedCard:               0.01,
-	FreeKickDefensiveHalf: 0.06,
+	ETSubstitution:          0.02,
+	ETFoul:                  0.10,
+	ETYellowCard:            0.06,
+	ETRedCard:               0.01,
+	ETFreeKickDefensiveHalf: 0.06,
 }
 
 var WeightedAttackingEvents = WeightedEventSet{
-	Penalty:        0.01,
-	FreeKickOnGoal: 0.04,
-	Advantage:      0.05,
+	ETPenalty:        0.01,
+	ETFreeKickOnGoal: 0.04,
+	ETAdvantage:      0.05,
 }
 
 var AllWeightedEvents = mergeWeights(
@@ -72,7 +85,7 @@ var AllWeightedEvents = mergeWeights(
 
 func RandomWeightedEvent(weights WeightedEventSet, randFloat func() float64) EventType {
 	if len(weights) == 0 {
-		return EventTypeNone
+		return ETNone
 	}
 
 	// compute the CDF (Cumulative Distribution Function)
@@ -90,7 +103,7 @@ func RandomWeightedEvent(weights WeightedEventSet, randFloat func() float64) Eve
 		}
 	}
 
-	return EventTypeNone
+	return ETNone
 }
 
 func mergeWeights(sets ...WeightedEventSet) WeightedEventSet {

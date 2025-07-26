@@ -25,50 +25,80 @@ type PlayerSearchOptions struct {
 func (t *Team) SearchPlayers(options PlayerSearchOptions) Player {
 	type PlayerScore struct {
 		Player Player
-		Score  int
+		Score  float64
 	}
-	scores := make(map[PlayerNumber]PlayerScore, 0)
-	for _, player := range t.Players {
-		score := PlayerScore{
-			Player: player,
-			Score:  0,
-		}
-		if player.Position == options.Position {
-			score.Score += 2
-		}
-		if similar, ok := SimilarPositions[player.Position]; ok {
-			for _, s := range similar {
-				if options.Position == s {
-					score.Score += 1
-				}
-			}
-		}
-		if player.Name == options.Name {
-			score.Score += 2
-		}
-		if player.Number == options.Number {
-			score.Score += 2
-		}
-		if _, found := options.Exclusions[player.Number]; found {
-			score.Score = 0
-		}
-		scores[player.Number] = score
-	}
-	var highest *PlayerScore
-	for _, score := range scores {
-		if score.Score == 0 {
+
+	similarityWeights := make(map[PlayerPosition]float64)
+	similarityWeights[options.Position] = 2.0 // direct match
+
+	visited := map[PlayerPosition]bool{options.Position: true}
+	queue := []struct {
+		Pos   PlayerPosition
+		Depth int
+	}{{options.Position, 0}}
+
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+
+		if current.Depth >= 3 {
 			continue
 		}
-		if highest == nil {
-			highest = &score
-		}
-		if score.Score > highest.Score {
-			highest = &score
+
+		for _, similar := range SimilarPositions[current.Pos] {
+			if !visited[similar] {
+				visited[similar] = true
+
+				weight := map[int]float64{
+					0: 2.0,  // direct match
+					1: 1.0,  // 1st-degree similar
+					2: 0.5,  // 2nd-degree similar
+					3: 0.25, // 3rd-degree similar
+				}[current.Depth+1]
+
+				similarityWeights[similar] = weight
+
+				queue = append(queue, struct {
+					Pos   PlayerPosition
+					Depth int
+				}{similar, current.Depth + 1})
+			}
 		}
 	}
+
+	var highest *PlayerScore
+	for _, player := range t.Players {
+		if _, excluded := options.Exclusions[player.Number]; excluded {
+			continue
+		}
+
+		score := 0.0
+
+		if weight, ok := similarityWeights[player.Position]; ok {
+			score += weight
+		}
+
+		if player.Name == options.Name {
+			score += 2
+		}
+
+		if player.Number == options.Number {
+			score += 2
+		}
+
+		if score == 0 {
+			continue
+		}
+
+		if highest == nil || score > highest.Score {
+			highest = &PlayerScore{Player: player, Score: score}
+		}
+	}
+
 	if highest == nil {
 		panic(fmt.Errorf("no player found with options (position: %s, exclusions: %+v)", options.Position.String(), options.Exclusions))
 	}
+
 	return highest.Player
 }
 
@@ -206,7 +236,7 @@ var SimilarPositions = map[PlayerPosition][]PlayerPosition{
 	CentralAttackingMidfielder: {CentralMidfielder, CentreForward},
 
 	CentreForward: {Striker, CentralAttackingMidfielder},
-	Striker:       {CentreForward},
+	Striker:       {CentreForward, LeftWinger, RightWinger},
 }
 
 type TechnicalSkill struct {
@@ -214,6 +244,7 @@ type TechnicalSkill struct {
 	Passing   PassingSkill
 	Shooting  ShootingSkill
 	Defending DefendingSkill
+	Dribbling int
 	FreeKicks int
 	Penalties int
 }
@@ -233,10 +264,10 @@ type PassingSkill struct {
 }
 
 type ShootingSkill struct {
-	Power  int
-	Curve  int
-	Finish int
-	Spin   int
+	Power     int
+	Curve     int
+	Finishing int
+	Spin      int
 }
 
 type DefendingSkill struct {
@@ -249,6 +280,11 @@ type DefendingSkill struct {
 type HeadingSkill struct {
 	Accuracy int
 	Power    int
+}
+
+type DribblingSkill struct {
+	SkillMoves int
+	Agility    int
 }
 
 type TacticalIntelligence struct {
