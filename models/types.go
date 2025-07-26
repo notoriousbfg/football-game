@@ -239,12 +239,36 @@ var SimilarPositions = map[PlayerPosition][]PlayerPosition{
 	Striker:       {CentreForward, LeftWinger, RightWinger},
 }
 
+var OpponentAdjacents = map[PlayerPosition][]PlayerPosition{
+	Goalkeeper: {},
+
+	RightBack:       {LeftWinger, LeftMidfielder},
+	RightWingBack:   {LeftWinger, LeftMidfielder},
+	RightMidfielder: {LeftMidfielder, CentralMidfielder},
+	RightWinger:     {LeftWinger, LeftMidfielder},
+
+	LeftCentreBack:  {CentreForward, Striker, RightWinger},
+	RightCentreBack: {CentreForward, Striker, LeftWinger},
+
+	LeftBack:       {RightWinger, RightMidfielder},
+	LeftWingBack:   {RightWinger, RightMidfielder},
+	LeftMidfielder: {RightMidfielder, CentralMidfielder},
+	LeftWinger:     {RightWinger, RightMidfielder},
+
+	CentralMidfielder:          {CentralDefensiveMidfielder, RightCentreBack, LeftCentreBack},
+	CentralDefensiveMidfielder: {CentralAttackingMidfielder, CentreForward},
+	CentralAttackingMidfielder: {CentralDefensiveMidfielder, CentreForward},
+
+	CentreForward: {LeftCentreBack, RightCentreBack, CentralDefensiveMidfielder},
+	Striker:       {LeftCentreBack, RightCentreBack, CentralDefensiveMidfielder},
+}
+
 type TechnicalSkill struct {
 	Speed     SpeedSkill
 	Passing   PassingSkill
 	Shooting  ShootingSkill
 	Defending DefendingSkill
-	Dribbling int
+	Dribbling DribblingSkill
 	FreeKicks int
 	Penalties int
 }
@@ -285,6 +309,7 @@ type HeadingSkill struct {
 type DribblingSkill struct {
 	SkillMoves int
 	Agility    int
+	Dribbling  int
 }
 
 type TacticalIntelligence struct {

@@ -24,11 +24,12 @@ func _() {
 	_ = x[ETPass-13]
 	_ = x[ETGoalScoringChance-14]
 	_ = x[ETInterception-15]
+	_ = x[ETDribble-16]
 }
 
-const _EventType_name = "ETNoneETHalfTimeExtraTimeAnnouncementETFullTimeExtraTimeAnnouncementETHalfTimeETFullTimeETSubstitutionETPenaltyETFreeKickOnGoalETFreeKickDefensiveHalfETFoulETAdvantageETYellowCardETRedCardETPassETGoalScoringChanceETInterception"
+const _EventType_name = "ETNoneETHalfTimeExtraTimeAnnouncementETFullTimeExtraTimeAnnouncementETHalfTimeETFullTimeETSubstitutionETPenaltyETFreeKickOnGoalETFreeKickDefensiveHalfETFoulETAdvantageETYellowCardETRedCardETPassETGoalScoringChanceETInterceptionETDribble"
 
-var _EventType_index = [...]uint8{0, 6, 37, 68, 78, 88, 102, 111, 127, 150, 156, 167, 179, 188, 194, 213, 227}
+var _EventType_index = [...]uint8{0, 6, 37, 68, 78, 88, 102, 111, 127, 150, 156, 167, 179, 188, 194, 213, 227, 236}
 
 func (i EventType) String() string {
 	if i < 0 || i >= EventType(len(_EventType_index)-1) {
