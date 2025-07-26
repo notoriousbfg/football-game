@@ -11,23 +11,24 @@ func _() {
 	_ = x[Goalkeeper-0]
 	_ = x[RightBack-1]
 	_ = x[RightWingBack-2]
-	_ = x[CentreBack-3]
-	_ = x[LeftBack-4]
-	_ = x[LeftWingBack-5]
-	_ = x[LeftMidfielder-6]
-	_ = x[LeftWinger-7]
-	_ = x[CentralMidfielder-8]
-	_ = x[CentralDefensiveMidfielder-9]
-	_ = x[CentralAttackingMidfieler-10]
-	_ = x[CentreForward-11]
-	_ = x[RightMidfielder-12]
-	_ = x[RightWinger-13]
-	_ = x[Striker-14]
+	_ = x[LeftCentreBack-3]
+	_ = x[RightCentreBack-4]
+	_ = x[LeftBack-5]
+	_ = x[LeftWingBack-6]
+	_ = x[LeftMidfielder-7]
+	_ = x[LeftWinger-8]
+	_ = x[CentralMidfielder-9]
+	_ = x[CentralDefensiveMidfielder-10]
+	_ = x[CentralAttackingMidfielder-11]
+	_ = x[CentreForward-12]
+	_ = x[RightMidfielder-13]
+	_ = x[RightWinger-14]
+	_ = x[Striker-15]
 }
 
-const _PlayerPosition_name = "GoalkeeperRightBackRightWingBackCentreBackLeftBackLeftWingBackLeftMidfielderLeftWingerCentralMidfielderCentralDefensiveMidfielderCentralAttackingMidfielerCentreForwardRightMidfielderRightWingerStriker"
+const _PlayerPosition_name = "GoalkeeperRightBackRightWingBackLeftCentreBackRightCentreBackLeftBackLeftWingBackLeftMidfielderLeftWingerCentralMidfielderCentralDefensiveMidfielderCentralAttackingMidfielderCentreForwardRightMidfielderRightWingerStriker"
 
-var _PlayerPosition_index = [...]uint8{0, 10, 19, 32, 42, 50, 62, 76, 86, 103, 129, 154, 167, 182, 193, 200}
+var _PlayerPosition_index = [...]uint8{0, 10, 19, 32, 46, 61, 69, 81, 95, 105, 122, 148, 174, 187, 202, 213, 220}
 
 func (i PlayerPosition) String() string {
 	if i < 0 || i >= PlayerPosition(len(_PlayerPosition_index)-1) {

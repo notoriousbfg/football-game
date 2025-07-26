@@ -9,11 +9,24 @@ import (
 	"github.com/notoriousbfg/football-game/models"
 )
 
-type Pitch struct{}
+type Pitch struct {
+	Match      *Match
+	Exclusions map[string]map[models.PlayerNumber]bool
+}
 
-func (p *Pitch) Draw(match *Match) {
-	homeTeam := p.drawHomeTeam(match.H)
-	awayTeam := p.drawAwayTeam(match.A)
+func NewPitch(match *Match) *Pitch {
+	return &Pitch{
+		Match: match,
+		Exclusions: map[string]map[models.PlayerNumber]bool{
+			match.H.Name: make(map[models.PlayerNumber]bool),
+			match.A.Name: make(map[models.PlayerNumber]bool),
+		},
+	}
+}
+
+func (p *Pitch) Draw() {
+	homeTeam := p.drawHomeTeam(p.Match.H)
+	awayTeam := p.drawAwayTeam(p.Match.A)
 
 	p.drawPitch(homeTeam, awayTeam)
 }
@@ -23,11 +36,25 @@ func (p *Pitch) drawHomeTeam(team models.Team) []string {
 	switch team.Strategy.Formation {
 	case models.FormationFourThreeThree:
 		rows = make([]string, 4)
-		// TODO fix exclusions
-		rows[0] = p.renderRow(team, "three", []models.PlayerPosition{models.LeftWinger | models.LeftMidfielder, models.Striker, models.RightWinger | models.RightMidfielder})
-		rows[1] = p.renderRow(team, "three", []models.PlayerPosition{models.CentralMidfielder | models.LeftMidfielder, models.CentralAttackingMidfieler, models.CentralMidfielder | models.RightMidfielder})
-		rows[2] = p.renderRow(team, "four", []models.PlayerPosition{models.LeftBack | models.LeftWingBack, models.CentreBack, models.CentreBack, models.RightBack | models.RightWingBack})
-		rows[3] = p.renderRow(team, "one", []models.PlayerPosition{models.Goalkeeper})
+		rows[0] = p.renderRow(team, "three", []models.PlayerPosition{
+			models.LeftWinger,
+			models.Striker,
+			models.RightWinger,
+		})
+		rows[1] = p.renderRow(team, "three", []models.PlayerPosition{
+			models.CentralMidfielder,
+			models.CentralAttackingMidfielder,
+			models.CentralMidfielder,
+		})
+		rows[2] = p.renderRow(team, "four", []models.PlayerPosition{
+			models.LeftBack,
+			models.LeftCentreBack,
+			models.RightCentreBack,
+			models.RightBack,
+		})
+		rows[3] = p.renderRow(team, "one", []models.PlayerPosition{
+			models.Goalkeeper,
+		})
 	}
 	return rows
 }
@@ -37,11 +64,25 @@ func (p *Pitch) drawAwayTeam(team models.Team) []string {
 	switch team.Strategy.Formation {
 	case models.FormationFourThreeThree:
 		rows = make([]string, 4)
-		// TODO fix exclusions
-		rows[0] = p.renderRow(team, "one", []models.PlayerPosition{models.Goalkeeper})
-		rows[1] = p.renderRow(team, "four", []models.PlayerPosition{models.RightBack | models.RightWingBack, models.CentreBack, models.CentreBack, models.LeftBack | models.LeftWingBack})
-		rows[2] = p.renderRow(team, "three", []models.PlayerPosition{models.CentralMidfielder, models.CentralAttackingMidfieler | models.CentralMidfielder, models.CentralMidfielder})
-		rows[3] = p.renderRow(team, "three", []models.PlayerPosition{models.RightWinger | models.RightMidfielder, models.Striker, models.LeftWinger | models.LeftMidfielder})
+		rows[0] = p.renderRow(team, "one", []models.PlayerPosition{
+			models.Goalkeeper,
+		})
+		rows[1] = p.renderRow(team, "four", []models.PlayerPosition{
+			models.RightBack,
+			models.RightCentreBack,
+			models.LeftCentreBack,
+			models.LeftBack,
+		})
+		rows[2] = p.renderRow(team, "three", []models.PlayerPosition{
+			models.CentralMidfielder,
+			models.CentralAttackingMidfielder | models.CentralMidfielder,
+			models.CentralMidfielder,
+		})
+		rows[3] = p.renderRow(team, "three", []models.PlayerPosition{
+			models.RightWinger,
+			models.Striker,
+			models.LeftWinger,
+		})
 
 	}
 	return rows
@@ -81,7 +122,7 @@ func (p *Pitch) renderRow(team models.Team, templateName string, positions []mod
 		panic(err)
 	}
 	bodyStr := string(body)
-	exclusions := make(map[models.PlayerNumber]bool)
+	exclusions := p.Exclusions[team.Name]
 	for i, position := range positions {
 		player := team.SearchPlayers(models.PlayerSearchOptions{
 			Position:   position,

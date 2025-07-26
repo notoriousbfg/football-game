@@ -19,7 +19,8 @@ type Simulation struct {
 }
 
 func (sim *Simulation) Run() {
-	sim.Pitch.Draw(&sim.Match)
+	sim.Pitch = NewPitch(&sim.Match)
+	sim.Pitch.Draw()
 
 	halfSeconds := 45 * 60
 

@@ -29,36 +29,45 @@ func (t *Team) SearchPlayers(options PlayerSearchOptions) Player {
 	}
 	scores := make(map[PlayerNumber]PlayerScore, 0)
 	for _, player := range t.Players {
-		if _, found := options.Exclusions[player.Number]; found {
-			continue
-		}
 		score := PlayerScore{
 			Player: player,
 			Score:  0,
 		}
 		if player.Position == options.Position {
-			score.Score++
+			score.Score += 2
+		}
+		if similar, ok := SimilarPositions[player.Position]; ok {
+			for _, s := range similar {
+				if options.Position == s {
+					score.Score += 1
+				}
+			}
 		}
 		if player.Name == options.Name {
-			score.Score++
+			score.Score += 2
 		}
 		if player.Number == options.Number {
-			score.Score++
+			score.Score += 2
+		}
+		if _, found := options.Exclusions[player.Number]; found {
+			score.Score = 0
 		}
 		scores[player.Number] = score
 	}
 	var highest *PlayerScore
 	for _, score := range scores {
+		if score.Score == 0 {
+			continue
+		}
 		if highest == nil {
 			highest = &score
-			continue
 		}
 		if score.Score > highest.Score {
 			highest = &score
 		}
 	}
 	if highest == nil {
-		panic(fmt.Errorf("no player found with options (%v)", options))
+		panic(fmt.Errorf("no player found with options (position: %s, exclusions: %+v)", options.Position.String(), options.Exclusions))
 	}
 	return highest.Player
 }
@@ -161,19 +170,44 @@ const (
 	Goalkeeper PlayerPosition = iota
 	RightBack
 	RightWingBack
-	CentreBack
+	LeftCentreBack
+	RightCentreBack
 	LeftBack
 	LeftWingBack
 	LeftMidfielder
 	LeftWinger
 	CentralMidfielder
 	CentralDefensiveMidfielder
-	CentralAttackingMidfieler
+	CentralAttackingMidfielder
 	CentreForward
 	RightMidfielder
 	RightWinger
 	Striker
 )
+
+var SimilarPositions = map[PlayerPosition][]PlayerPosition{
+	Goalkeeper: {},
+
+	RightBack:       {RightWingBack},
+	RightWingBack:   {RightBack, RightMidfielder, RightWinger},
+	RightMidfielder: {RightWingBack, RightWinger},
+	RightWinger:     {RightMidfielder, RightWingBack},
+
+	LeftCentreBack:  {CentralDefensiveMidfielder, RightCentreBack},
+	RightCentreBack: {CentralDefensiveMidfielder, LeftCentreBack},
+
+	LeftBack:       {LeftWingBack},
+	LeftWingBack:   {LeftBack, LeftMidfielder, LeftWinger},
+	LeftMidfielder: {LeftWingBack, LeftWinger},
+	LeftWinger:     {LeftMidfielder, LeftWingBack},
+
+	CentralMidfielder:          {CentralDefensiveMidfielder, CentralAttackingMidfielder},
+	CentralDefensiveMidfielder: {CentralMidfielder, LeftCentreBack, RightCentreBack},
+	CentralAttackingMidfielder: {CentralMidfielder, CentreForward},
+
+	CentreForward: {Striker, CentralAttackingMidfielder},
+	Striker:       {CentreForward},
+}
 
 type TechnicalSkill struct {
 	Speed     SpeedSkill

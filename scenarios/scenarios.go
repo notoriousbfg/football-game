@@ -81,7 +81,7 @@ func HomeTeam() models.Team {
 			{
 				Name:     "Ilya Zabarnyi",
 				Number:   5,
-				Position: models.CentreBack,
+				Position: models.LeftCentreBack,
 				Form:     73, Adaptability: 70, Composure: 75,
 				Technical: models.TechnicalSkill{
 					Speed:    models.SpeedSkill{Speed: 68, Acceleration: 65},
@@ -104,7 +104,7 @@ func HomeTeam() models.Team {
 			},
 			{
 				Name:         "Dean Huijsen",
-				Position:     models.CentreBack,
+				Position:     models.RightCentreBack,
 				Number:       15,
 				Form:         78,
 				Adaptability: 80,
@@ -277,7 +277,7 @@ func HomeTeam() models.Team {
 			{
 				Name:     "Ryan Christie",
 				Number:   10,
-				Position: models.CentralAttackingMidfieler,
+				Position: models.CentralAttackingMidfielder,
 				Form:     74, Adaptability: 72, Composure: 73,
 				Technical: models.TechnicalSkill{
 					Speed:    models.SpeedSkill{Speed: 70, Acceleration: 68},
@@ -400,7 +400,7 @@ func AwayTeam() models.Team {
 			},
 			{
 				Name:         "William Saliba",
-				Position:     models.CentreBack,
+				Position:     models.LeftCentreBack,
 				Number:       6,
 				Form:         88,
 				Adaptability: 88,
@@ -444,7 +444,7 @@ func AwayTeam() models.Team {
 			},
 			{
 				Name:         "Takehiro Tomiyasu",
-				Position:     models.CentreBack,
+				Position:     models.RightCentreBack,
 				Number:       18,
 				Form:         82,
 				Adaptability: 80,
@@ -488,7 +488,7 @@ func AwayTeam() models.Team {
 			},
 			{
 				Name:         "Martin Ødegaard",
-				Position:     models.CentralAttackingMidfieler,
+				Position:     models.CentralAttackingMidfielder,
 				Number:       8,
 				Form:         90,
 				Adaptability: 88,
