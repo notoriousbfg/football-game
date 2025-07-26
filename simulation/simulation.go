@@ -245,7 +245,7 @@ func (s *SimulationState) evaluatePass(team *models.Team) Event {
 		if success {
 			receivingPlayer := team.SearchPlayers(models.PlayerSearchOptions{
 				Position:   models.Striker,
-				Exclusions: map[models.PlayerNumber]bool{player.Number: true},
+				Exclusions: map[models.PlayerNumber]string{player.Number: player.Initials()},
 			})
 			return Event{
 				Type:            ETPass,
@@ -263,7 +263,7 @@ func (s *SimulationState) evaluatePass(team *models.Team) Event {
 		if success {
 			receivingPlayer := team.SearchPlayers(models.PlayerSearchOptions{
 				Position:   models.Striker,
-				Exclusions: map[models.PlayerNumber]bool{player.Number: true},
+				Exclusions: map[models.PlayerNumber]string{player.Number: player.Initials()},
 			})
 			return Event{
 				Type:            ETPass,

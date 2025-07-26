@@ -3,6 +3,7 @@ package simulation
 import (
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"strings"
 
@@ -11,15 +12,15 @@ import (
 
 type Pitch struct {
 	Match      *Match
-	Exclusions map[string]map[models.PlayerNumber]bool
+	Exclusions map[string]map[models.PlayerNumber]string
 }
 
 func NewPitch(match *Match) *Pitch {
 	return &Pitch{
 		Match: match,
-		Exclusions: map[string]map[models.PlayerNumber]bool{
-			match.H.Name: make(map[models.PlayerNumber]bool),
-			match.A.Name: make(map[models.PlayerNumber]bool),
+		Exclusions: map[string]map[models.PlayerNumber]string{
+			match.H.Name: make(map[models.PlayerNumber]string),
+			match.A.Name: make(map[models.PlayerNumber]string),
 		},
 	}
 }
@@ -45,6 +46,27 @@ func (p *Pitch) drawHomeTeam(team models.Team) []string {
 			models.CentralMidfielder,
 			models.CentralAttackingMidfielder,
 			models.CentralMidfielder,
+		})
+		rows[2] = p.renderRow(team, "four", []models.PlayerPosition{
+			models.LeftBack,
+			models.LeftCentreBack,
+			models.RightCentreBack,
+			models.RightBack,
+		})
+		rows[3] = p.renderRow(team, "one", []models.PlayerPosition{
+			models.Goalkeeper,
+		})
+	case models.FormationFourFourTwo:
+		rows = make([]string, 4)
+		rows[0] = p.renderRow(team, "two", []models.PlayerPosition{
+			models.Striker,
+			models.Striker,
+		})
+		rows[1] = p.renderRow(team, "four", []models.PlayerPosition{
+			models.LeftMidfielder,
+			models.CentralMidfielder,
+			models.CentralMidfielder,
+			models.RightMidfielder,
 		})
 		rows[2] = p.renderRow(team, "four", []models.PlayerPosition{
 			models.LeftBack,
@@ -83,7 +105,27 @@ func (p *Pitch) drawAwayTeam(team models.Team) []string {
 			models.Striker,
 			models.LeftWinger,
 		})
-
+	case models.FormationFourFourTwo:
+		rows = make([]string, 4)
+		rows[0] = p.renderRow(team, "one", []models.PlayerPosition{
+			models.Goalkeeper,
+		})
+		rows[1] = p.renderRow(team, "four", []models.PlayerPosition{
+			models.RightBack,
+			models.RightCentreBack,
+			models.LeftCentreBack,
+			models.LeftBack,
+		})
+		rows[2] = p.renderRow(team, "four", []models.PlayerPosition{
+			models.RightMidfielder,
+			models.CentralMidfielder,
+			models.CentralMidfielder,
+			models.LeftMidfielder,
+		})
+		rows[3] = p.renderRow(team, "two", []models.PlayerPosition{
+			models.Striker,
+			models.Striker,
+		})
 	}
 	return rows
 }
@@ -122,11 +164,13 @@ func (p *Pitch) renderRow(team models.Team, templateName string, positions []mod
 		panic(err)
 	}
 	bodyStr := string(body)
-	exclusions := p.Exclusions[team.Name]
+	originalExclusions := p.Exclusions[team.Name]
+	exclusions := make(map[models.PlayerNumber]string, len(originalExclusions))
+	maps.Copy(originalExclusions, exclusions)
 	for i, position := range positions {
 		player := team.SearchPlayers(models.PlayerSearchOptions{
 			Position:   position,
-			Exclusions: exclusions, // prevents adding the same place twice
+			Exclusions: exclusions,
 		})
 		initials := player.Initials()
 		bodyStr = strings.Replace(
@@ -135,7 +179,10 @@ func (p *Pitch) renderRow(team models.Team, templateName string, positions []mod
 			initials,
 			1,
 		)
-		exclusions[player.Number] = true
+		if p.Exclusions[team.Name] == nil {
+			p.Exclusions[team.Name] = make(map[models.PlayerNumber]string)
+		}
+		p.Exclusions[team.Name][player.Number] = initials
 	}
 	return bodyStr
 }

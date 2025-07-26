@@ -10,7 +10,7 @@ func HomeTeam() models.Team {
 		Chemistry: 85,
 		Strategy: models.Strategy{
 			Tactic:    models.TacticPressing,
-			Formation: models.FormationFourThreeThree,
+			Formation: models.FormationFourFourTwo,
 			PlayStyle: models.PlayStyleCreative,
 			PlayerInstructions: map[models.PlayerNumber]models.Instruction{
 				1:  {Position: models.PositionCenter}, // GK

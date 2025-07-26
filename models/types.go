@@ -19,7 +19,7 @@ type PlayerSearchOptions struct {
 	Position   PlayerPosition
 	Name       string
 	Number     PlayerNumber
-	Exclusions map[PlayerNumber]bool
+	Exclusions map[PlayerNumber]string
 }
 
 func (t *Team) SearchPlayers(options PlayerSearchOptions) Player {
@@ -218,7 +218,7 @@ const (
 var SimilarPositions = map[PlayerPosition][]PlayerPosition{
 	Goalkeeper: {},
 
-	RightBack:       {RightWingBack},
+	RightBack:       {RightWingBack, RightCentreBack},
 	RightWingBack:   {RightBack, RightMidfielder, RightWinger},
 	RightMidfielder: {RightWingBack, RightWinger},
 	RightWinger:     {RightMidfielder, RightWingBack},
@@ -226,7 +226,7 @@ var SimilarPositions = map[PlayerPosition][]PlayerPosition{
 	LeftCentreBack:  {CentralDefensiveMidfielder, RightCentreBack},
 	RightCentreBack: {CentralDefensiveMidfielder, LeftCentreBack},
 
-	LeftBack:       {LeftWingBack},
+	LeftBack:       {LeftWingBack, LeftCentreBack},
 	LeftWingBack:   {LeftBack, LeftMidfielder, LeftWinger},
 	LeftMidfielder: {LeftWingBack, LeftWinger},
 	LeftWinger:     {LeftMidfielder, LeftWingBack},
