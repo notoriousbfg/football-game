@@ -120,6 +120,10 @@ func CreateSimulation(home, away models.Team) *Simulation {
 func (sim *Simulation) registerTriggers() {
 	sim.EventTriggers = make(map[EventType]EventTrigger)
 
+	sim.EventTriggers[ETEndOfFirstHalf] = func(e Event, s *SimulationState) {
+
+	}
+
 	sim.EventTriggers[ETPass] = func(e Event, s *SimulationState) {
 		s.Log.logPass(s, e)
 		s.Time = s.Time.Add(time.Second * 3)
@@ -203,7 +207,7 @@ func (sim *Simulation) registerTriggers() {
 	sim.EventTriggers[ETSave] = func(e Event, s *SimulationState) {
 		s.Log.logSave(s, e)
 		s.CaptureEvent(
-			s.action(e),
+			s.goalKeeperKick(e),
 		)
 	}
 
@@ -225,8 +229,8 @@ type SimulationState struct {
 	HomeTeamAttacking   bool
 	AwayTeamAttacking   bool
 	Stalemate           bool
-	FirstHalfExtraTime  int // seconds
-	SecondHalfExtraTime int // seconds
+	FirstHalfExtraTime  time.Duration // seconds
+	SecondHalfExtraTime time.Duration // seconds
 	RandomFloat         func() float64
 	Events              []Event
 	Outcome             *Outcome
@@ -234,8 +238,6 @@ type SimulationState struct {
 }
 
 func (s *SimulationState) CaptureEvent(e Event) {
-	// TODO stop the game running beyond each half
-
 	s.Events = append(s.Events, e)
 
 	if trigger, exists := s.Simulation.EventTriggers[e.Type]; exists {
@@ -251,7 +253,26 @@ func (s *SimulationState) LastEvent() Event {
 
 func (s *SimulationState) Timestamp() string {
 	duration := s.Time.Sub(s.Start)
-	return fmt.Sprintf("%02d:%02d", int(duration.Minutes())%60, int(duration.Seconds())%60)
+
+	minutes := duration.Minutes()
+	if duration.Hours() > 0 {
+		minutes += duration.Hours() * 60
+	}
+
+	return fmt.Sprintf("%02d:%02d", int(minutes)%90, int(duration.Seconds())%60)
+}
+
+func (s *SimulationState) trackProgress() *Event {
+	if s.Time.After(s.Start.Add((time.Second * 90 * 60) + s.SecondHalfExtraTime)) {
+		return &Event{Type: ETEndOfSecondHalfExtraTime}
+	} else if s.Time.After(s.Start.Add(time.Second * 90 * 60)) {
+		return &Event{Type: ETEndOfSecondHalf}
+	} else if s.Time.After(s.Start.Add((time.Second * 45 * 60) + s.FirstHalfExtraTime)) {
+		return &Event{Type: ETEndOfFirstHalfExtraTime}
+	} else if s.Time.After(s.Start.Add((time.Second * 45 * 60))) {
+		return &Event{Type: ETEndOfFirstHalf}
+	}
+	return nil
 }
 
 func (s *SimulationState) isHome(team models.Team) bool {
@@ -280,6 +301,18 @@ func (s *SimulationState) startingEvent(team models.Team) Event {
 		EventMeta: EventMeta{
 			"quality": 100,
 		},
+	}
+}
+
+func (s *SimulationState) goalKeeperKick(e Event) Event {
+	receivingPlayer := e.Team.SearchPlayers(models.PlayerSearchOptions{
+		Position: models.CentralMidfielder,
+	})
+	return Event{
+		Type:            ETPass,
+		Team:            e.Team,
+		StartingPlayer:  e.FinishingPlayer,
+		FinishingPlayer: &receivingPlayer,
 	}
 }
 
@@ -575,6 +608,10 @@ func (s *SimulationState) opponentNearestTo(attackerPos models.PlayerPosition, o
 }
 
 func (s *SimulationState) evaluateHold(player models.Player) bool {
+	if player.Position == models.Goalkeeper {
+		return true
+	}
+
 	agility := player.Fitness.Agility
 	strength := player.Fitness.Strength
 	vision := player.TacticalIntelligence.Vision.Passing

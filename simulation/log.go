@@ -43,5 +43,5 @@ func (l *Log) logMissingTrigger(s *SimulationState, e Event) {
 }
 
 func (l *Log) logSave(s *SimulationState, e Event) {
-	fmt.Printf("(%s) %s took a shot but it was saved by %s.\n", s.Timestamp(), e.StartingPlayer.Name, e.FinishingPlayer.Name)
+	fmt.Printf("(%s) %s took a shot but it was saved by %s\n", s.Timestamp(), e.StartingPlayer.Name, e.FinishingPlayer.Name)
 }

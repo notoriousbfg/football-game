@@ -244,7 +244,7 @@ var SimilarPositions = map[PlayerPosition][]PlayerPosition{
 }
 
 var OpponentAdjacents = map[PlayerPosition][]PlayerPosition{
-	Goalkeeper: {},
+	Goalkeeper: {Striker, LeftWinger, RightWinger, CentreForward},
 
 	RightBack:       {LeftWinger, LeftMidfielder},
 	RightWingBack:   {LeftWinger, LeftMidfielder},
