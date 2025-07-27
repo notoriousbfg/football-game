@@ -1,6 +1,10 @@
 package helpers
 
-import "github.com/notoriousbfg/football-game/models"
+import (
+	"math"
+
+	"github.com/notoriousbfg/football-game/models"
+)
 
 func IsWinger(pos models.PlayerPosition) bool {
 	return pos == models.LeftWinger || pos == models.RightWinger ||
@@ -11,4 +15,8 @@ func IsWinger(pos models.PlayerPosition) bool {
 func IsAttacker(pos models.PlayerPosition) bool {
 	return pos == models.Striker || pos == models.CentreForward ||
 		pos == models.CentralAttackingMidfielder
+}
+
+func Sigmoid(x float64) float64 {
+	return 1.0 / (1.0 + math.Exp(-x))
 }

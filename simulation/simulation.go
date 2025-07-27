@@ -44,11 +44,11 @@ func (sim *Simulation) Run() {
 	}
 }
 
-func (sim *Simulation) runPeriod(start, seconds int) {
-	for i := start; i <= start+seconds; i++ {
-		sim.State.Time = sim.State.Time.Add(time.Second)
-	}
-}
+// func (sim *Simulation) runPeriod(start, seconds int) {
+// 	for i := start; i <= start+seconds; i++ {
+// 		sim.State.Time = sim.State.Time.Add(time.Second)
+// 	}
+// }
 
 func (sim *Simulation) opposingTeam(team models.Team) models.Team {
 	if sim.Match.A.Name == team.Name {
@@ -56,82 +56,6 @@ func (sim *Simulation) opposingTeam(team models.Team) models.Team {
 	} else {
 		return sim.Match.A
 	}
-}
-
-// things that change
-type SimulationState struct {
-	Simulation          *Simulation
-	Start               time.Time
-	Time                time.Time
-	HomeScore           int
-	AwayScore           int
-	HomeYellowCards     int
-	AwayYellowCards     int
-	HomeRedCards        int
-	AwayRedCards        int
-	HomeMomentum        float64
-	AwayMomentum        float64
-	HomeTeamAttacking   bool
-	AwayTeamAttacking   bool
-	Stalemate           bool
-	FirstHalfExtraTime  int // seconds
-	SecondHalfExtraTime int // seconds
-	RandomFloat         func() float64
-	Events              []Event
-	Outcome             *Outcome
-}
-
-func (s *SimulationState) CaptureEvent(e Event) {
-	s.Events = append(s.Events, e)
-
-	switch e.Type {
-	case ETPass:
-		s.Time = s.Time.Add(time.Second * 3)
-	case ETDribble:
-		s.Time = s.Time.Add(time.Second * 5)
-	case ETInterception:
-		s.Time = s.Time.Add(time.Second * 2)
-	case ETYellowCard:
-		switch e.Team.Name {
-		case s.Simulation.Match.H.Name:
-			s.HomeYellowCards++
-		case s.Simulation.Match.A.Name:
-			s.AwayYellowCards++
-		}
-		s.Time = s.Time.Add(time.Second * 30)
-	case ETRedCard:
-		switch e.Team.Name {
-		case s.Simulation.Match.H.Name:
-			s.HomeRedCards++
-		case s.Simulation.Match.A.Name:
-			s.HomeRedCards++
-		}
-		s.Time = s.Time.Add(time.Second * 30)
-	}
-
-	if trigger, exists := s.Simulation.EventTriggers[e.Type]; exists {
-		trigger(e, s)
-	}
-}
-
-func (s *SimulationState) LastEvent() Event {
-	return s.Events[len(s.Events)-1]
-}
-
-func (s *SimulationState) Timestamp() string {
-	duration := s.Time.Sub(s.Start)
-	return fmt.Sprintf("%02d:%02d:%02d", int(duration.Hours()), int(duration.Minutes())%60, int(duration.Seconds())%60)
-}
-
-type Match struct {
-	H models.Team
-	A models.Team
-}
-
-type TacticalCounter struct{}
-
-func goalChanceEvent() EventType {
-	return ETFreeKickOnGoal
 }
 
 func CreateSimulation(home, away models.Team) *Simulation {
@@ -170,32 +94,7 @@ func CreateSimulation(home, away models.Team) *Simulation {
 		sim.KickoffTeam = away
 	}
 
-	sim.EventTriggers = make(map[EventType]EventTrigger)
-
-	sim.EventTriggers[ETPass] = func(e Event, s *SimulationState) {
-		s.logPass(e)
-		s.CaptureEvent(
-			s.evaluatePass(&e.Team),
-		)
-	}
-
-	sim.EventTriggers[ETDribble] = func(e Event, s *SimulationState) {
-		s.logDribble(e)
-		s.CaptureEvent(e)
-	}
-
-	sim.EventTriggers[ETInterception] = func(e Event, s *SimulationState) {
-		s.logInterception(e)
-		s.CaptureEvent(e)
-	}
-
-	sim.EventTriggers[ETYellowCard] = func(e Event, s *SimulationState) {
-		s.CaptureEvent(e)
-	}
-
-	sim.EventTriggers[ETRedCard] = func(e Event, s *SimulationState) {
-		s.CaptureEvent(e)
-	}
+	sim.registerTriggers()
 
 	// triggers[HomeTeamAttacking] = func(e Event, s *SimulationState) {
 	// 	if s.evaluateAttack(e, randomFloat) {
@@ -203,7 +102,7 @@ func CreateSimulation(home, away models.Team) *Simulation {
 	// 		s.HomeMomentum += 0.1
 	// 		s.AwayMomentum -= 0.1
 	// 	}
-	// 	e.Log(s)
+	// 	e.Log.log(s)
 	// }
 
 	// triggers[AwayTeamAttacking] = func(e Event, s *SimulationState) {
@@ -212,21 +111,167 @@ func CreateSimulation(home, away models.Team) *Simulation {
 	// 		s.AwayMomentum += 0.1
 	// 		s.HomeMomentum -= 0.1
 	// 	}
-	// 	e.Log(s)
+	// 	e.Log.log(s)
 	// }
 
 	return sim
 }
 
+func (sim *Simulation) registerTriggers() {
+	sim.EventTriggers = make(map[EventType]EventTrigger)
+
+	sim.EventTriggers[ETPass] = func(e Event, s *SimulationState) {
+		s.Log.logPass(s, e)
+		s.Time = s.Time.Add(time.Second * 3)
+		s.CaptureEvent(
+			s.action(e),
+		)
+	}
+
+	sim.EventTriggers[ETCross] = func(e Event, s *SimulationState) {
+		s.Log.logCross(s, e)
+		s.Time = s.Time.Add(time.Second * 3)
+		s.CaptureEvent(
+			s.action(e),
+		)
+	}
+
+	sim.EventTriggers[ETDribble] = func(e Event, s *SimulationState) {
+		s.Log.logDribble(s, e)
+		s.Time = s.Time.Add(time.Second * 5)
+		s.CaptureEvent(
+			s.action(e),
+		)
+	}
+
+	sim.EventTriggers[ETGoal] = func(e Event, s *SimulationState) {
+		s.Log.logGoal(s, e)
+		s.Time = s.Time.Add(time.Minute * 2)
+		if s.isHome(e.Team) {
+			s.HomeScore++
+			s.HomeMomentum += 0.1
+		} else {
+			s.AwayScore++
+			s.AwayMomentum += 0.1
+		}
+		s.Log.logRestart(s)
+		s.CaptureEvent(
+			s.reset(e),
+		)
+	}
+
+	sim.EventTriggers[ETInterception] = func(e Event, s *SimulationState) {
+		s.Log.logInterception(s, e)
+		s.Time = s.Time.Add(time.Second * 3)
+		s.CaptureEvent(
+			s.action(e),
+		)
+	}
+
+	sim.EventTriggers[ETPossession] = func(e Event, s *SimulationState) {
+		s.Log.logPossession(s, e)
+		s.Time = s.Time.Add(time.Second * 3)
+		s.CaptureEvent(
+			s.action(e),
+		)
+	}
+
+	sim.EventTriggers[ETYellowCard] = func(e Event, s *SimulationState) {
+		s.Log.logYellowCard(s, e)
+		s.CaptureEvent(
+			s.freeKick(e),
+		)
+		s.Time = s.Time.Add(time.Second * 3)
+		if sim.State.isHome(e.Team) {
+			sim.State.HomeYellowCards++
+		} else {
+			sim.State.AwayYellowCards++
+		}
+	}
+
+	sim.EventTriggers[ETRedCard] = func(e Event, s *SimulationState) {
+		s.CaptureEvent(
+			s.freeKick(e),
+		)
+		if sim.State.isHome(e.Team) {
+			sim.State.HomeRedCards++
+		} else {
+			sim.State.HomeRedCards++
+		}
+	}
+
+	sim.EventTriggers[ETSave] = func(e Event, s *SimulationState) {
+		s.Log.logSave(s, e)
+		s.CaptureEvent(
+			s.action(e),
+		)
+	}
+
+}
+
+// things that change
+type SimulationState struct {
+	Simulation          *Simulation
+	Start               time.Time
+	Time                time.Time
+	HomeScore           int
+	AwayScore           int
+	HomeYellowCards     int
+	AwayYellowCards     int
+	HomeRedCards        int
+	AwayRedCards        int
+	HomeMomentum        float64
+	AwayMomentum        float64
+	HomeTeamAttacking   bool
+	AwayTeamAttacking   bool
+	Stalemate           bool
+	FirstHalfExtraTime  int // seconds
+	SecondHalfExtraTime int // seconds
+	RandomFloat         func() float64
+	Events              []Event
+	Outcome             *Outcome
+	Log                 *Log
+}
+
+func (s *SimulationState) CaptureEvent(e Event) {
+	// TODO stop the game running beyond each half
+
+	s.Events = append(s.Events, e)
+
+	if trigger, exists := s.Simulation.EventTriggers[e.Type]; exists {
+		trigger(e, s)
+	} else {
+		s.Log.logMissingTrigger(s, e)
+	}
+}
+
+func (s *SimulationState) LastEvent() Event {
+	return s.Events[len(s.Events)-1]
+}
+
+func (s *SimulationState) Timestamp() string {
+	duration := s.Time.Sub(s.Start)
+	return fmt.Sprintf("%02d:%02d", int(duration.Minutes())%60, int(duration.Seconds())%60)
+}
+
+func (s *SimulationState) isHome(team models.Team) bool {
+	return team.Name == s.Simulation.Match.H.Name
+}
+
+type Match struct {
+	H models.Team
+	A models.Team
+}
+
+type TacticalCounter struct{}
+
 func (s *SimulationState) startingEvent(team models.Team) Event {
 	startingPlayer := team.SearchPlayers(models.PlayerSearchOptions{
 		Position: models.Striker,
 	})
-
 	receivingPlayer := team.SearchPlayers(models.PlayerSearchOptions{
 		Position: models.CentralMidfielder,
 	})
-
 	return Event{
 		Type:            ETPass,
 		Team:            team,
@@ -238,43 +283,52 @@ func (s *SimulationState) startingEvent(team models.Team) Event {
 	}
 }
 
-func (s *SimulationState) evaluateAttack(randFloat func() float64) bool {
-	// get last event
-	// lastEvent := s.LastEvent()
-
-	// get team/player from event source
-
-	// pass, shoot, dribble?
-
-	// evaluate likelihood of chance
-
-	// evaluate likelihood of goal
-
-	// weighted dice roll
-
-	return false
+func (s *SimulationState) reset(e Event) Event {
+	opposingTeam := s.Simulation.opposingTeam(e.Team)
+	startingPlayer := e.Team.SearchPlayers(models.PlayerSearchOptions{
+		Position: models.Striker,
+	})
+	receivingPlayer := e.Team.SearchPlayers(models.PlayerSearchOptions{
+		Position: models.CentralMidfielder,
+	})
+	return Event{
+		Type:            ETPass,
+		Team:            opposingTeam,
+		StartingPlayer:  &startingPlayer,
+		FinishingPlayer: &receivingPlayer,
+		EventMeta: EventMeta{
+			"quality": 100,
+		},
+	}
 }
 
-func (s *SimulationState) evaluatePass(team *models.Team) Event {
-	lastEvent := s.LastEvent()
-	player := lastEvent.FinishingPlayer
+func (s *SimulationState) freeKick(e Event) Event {
+	opposingTeam := s.Simulation.opposingTeam(e.Team)
+	kickTaker := s.opponentNearestTo(e.FinishingPlayer.Position, opposingTeam.Players)
+	return Event{
+		Type:            ETFreeKickOnGoal,
+		Team:            opposingTeam,
+		StartingPlayer:  kickTaker,
+		FinishingPlayer: kickTaker,
+	}
+}
 
-	// decide what to do next
-	// pass, dribble, shoot
-	decision := s.makeDecision()
+func (s *SimulationState) action(e Event) Event {
+	player := e.FinishingPlayer
 
-	return s.evaluateDecision(*team, player, decision)
+	decision := s.makeDecision(e)
+
+	return s.evaluateDecision(e.Team, player, decision)
 }
 
 func (s *SimulationState) evaluateDecision(team models.Team, player *models.Player, decision Decision) Event {
 	switch decision {
 	case DecisionLongPass:
-		success := s.evaluateLongPass(*player)
 		receivingPlayer := team.SearchPlayers(models.PlayerSearchOptions{
 			Position:   models.Striker,
 			Exclusions: map[models.PlayerNumber]string{player.Number: player.Initials()},
 		})
-		if success {
+		if s.evaluateLongPass(*player) {
 			return Event{
 				Type:            ETPass,
 				Team:            team,
@@ -282,22 +336,14 @@ func (s *SimulationState) evaluateDecision(team models.Team, player *models.Play
 				FinishingPlayer: &receivingPlayer,
 			}
 		} else {
-			opposingTeam := s.Simulation.opposingTeam(team)
-			interceptor := s.nearestTo(receivingPlayer.Position, opposingTeam.Players)
-			return Event{
-				Type:            ETInterception,
-				Team:            opposingTeam,
-				StartingPlayer:  player,
-				FinishingPlayer: interceptor,
-			}
+			return s.turnover(team, player)
 		}
 	case DecisionShortPass:
-		success := s.evaluateShortPass(*player)
 		receivingPlayer := team.SearchPlayers(models.PlayerSearchOptions{
 			Position:   models.Striker,
 			Exclusions: map[models.PlayerNumber]string{player.Number: player.Initials()},
 		})
-		if success {
+		if s.evaluateShortPass(*player) {
 			return Event{
 				Type:            ETPass,
 				Team:            team,
@@ -305,19 +351,11 @@ func (s *SimulationState) evaluateDecision(team models.Team, player *models.Play
 				FinishingPlayer: &receivingPlayer,
 			}
 		} else {
-			opposingTeam := s.Simulation.opposingTeam(team)
-			interceptor := s.nearestTo(receivingPlayer.Position, opposingTeam.Players)
-			return Event{
-				Type:            ETInterception,
-				Team:            opposingTeam,
-				StartingPlayer:  player,
-				FinishingPlayer: interceptor,
-			}
+			return s.turnover(team, player)
 		}
 	case DecisionDribble:
 		opposingTeam := s.Simulation.opposingTeam(team)
-		success := s.evaluateDribble(*player, opposingTeam)
-		if success {
+		if s.evaluateDribble(*player, opposingTeam) {
 			return Event{
 				Type:            ETDribble,
 				Team:            team,
@@ -325,25 +363,68 @@ func (s *SimulationState) evaluateDecision(team models.Team, player *models.Play
 				FinishingPlayer: player,
 			}
 		} else {
-			interceptor := s.nearestTo(player.Position, opposingTeam.Players)
+			return s.turnover(team, player)
+		}
+	case DecisionCross:
+		if s.evaluateCross(*player) {
+			nearestTeammate := s.teamMateNearest(player.Position, team.Players)
 			return Event{
-				Type:            ETInterception,
-				Team:            s.Simulation.opposingTeam(team),
+				Type:            ETCross,
+				Team:            team,
 				StartingPlayer:  player,
-				FinishingPlayer: interceptor,
+				FinishingPlayer: nearestTeammate,
 			}
+		} else {
+			return s.turnover(team, player)
+		}
+	case DecisionShoot:
+		if s.evaluateShot(team, *player) {
+			return Event{
+				Type:            ETGoal,
+				Team:            team,
+				StartingPlayer:  player,
+				FinishingPlayer: player,
+			}
+		} else {
+			return s.save(player, team)
 		}
 	case NoDecision:
-		success := s.evaluateHold(*player)
-		if success {
-			return Event{}
-		} else {
+		if s.evaluateHold(*player) {
 			return Event{
-				Type: ETInterception,
+				Type:            ETPossession,
+				Team:            team,
+				StartingPlayer:  player,
+				FinishingPlayer: player,
 			}
+		} else {
+			return s.turnover(team, player)
 		}
 	default:
 		panic(fmt.Errorf("decision '%s' not handled", decision.String()))
+	}
+}
+
+func (s *SimulationState) turnover(team models.Team, player *models.Player) Event {
+	opposingTeam := s.Simulation.opposingTeam(team)
+	interceptor := s.opponentNearestTo(player.Position, opposingTeam.Players)
+	return Event{
+		Type:            ETInterception,
+		Team:            opposingTeam,
+		StartingPlayer:  player,
+		FinishingPlayer: interceptor,
+	}
+}
+
+func (s *SimulationState) save(player *models.Player, team models.Team) Event {
+	opposingTeam := s.Simulation.opposingTeam(team)
+	goalKeeper := opposingTeam.SearchPlayers(models.PlayerSearchOptions{
+		Position: models.Goalkeeper,
+	})
+	return Event{
+		Type:            ETSave,
+		Team:            opposingTeam,
+		StartingPlayer:  player,
+		FinishingPlayer: &goalKeeper,
 	}
 }
 
@@ -383,6 +464,10 @@ func (s *SimulationState) evaluateShortPass(player models.Player) bool {
 	return s.Simulation.RandomFloat() < successChance
 }
 
+func (s *SimulationState) evaluateCross(player models.Player) bool {
+	return true
+}
+
 func (s *SimulationState) evaluateDribble(player models.Player, opposingTeam models.Team) bool {
 	// base stats from the player
 	skill := float64(player.Technical.Dribbling.Dribbling)
@@ -394,7 +479,7 @@ func (s *SimulationState) evaluateDribble(player models.Player, opposingTeam mod
 
 	// penalize for nearby opponents
 	for _, defender := range opposingTeam.Players {
-		proximity := s.positionProximityScore(player.Position, defender.Position)
+		proximity := s.positionProximityScore(player.Position, defender.Position, models.OpponentAdjacents)
 		if proximity > 0 {
 			dribbleScore -= float64(defender.Technical.Defending.Interceptions) * proximity
 		}
@@ -420,12 +505,12 @@ func (s *SimulationState) evaluateDribble(player models.Player, opposingTeam mod
 	return s.Simulation.RandomFloat() < dribbleScore
 }
 
-func (s *SimulationState) positionProximityScore(attackerPos, defenderPos models.PlayerPosition) float64 {
+func (s *SimulationState) positionProximityScore(attackerPos, defenderPos models.PlayerPosition, adjacents map[models.PlayerPosition][]models.PlayerPosition) float64 {
 	if attackerPos == defenderPos {
 		return 1.0
 	}
 
-	adjacentPositions, ok := models.OpponentAdjacents[attackerPos]
+	adjacentPositions, ok := adjacents[attackerPos]
 	if !ok {
 		return 0.0
 	}
@@ -451,14 +536,35 @@ func (s *SimulationState) positionProximityScore(attackerPos, defenderPos models
 	return 0.0
 }
 
-func (s *SimulationState) nearestTo(attackerPos models.PlayerPosition, opponents []models.Player) *models.Player {
+func (s *SimulationState) teamMateNearest(attackerPos models.PlayerPosition, players []models.Player) *models.Player {
+	var (
+		bestScore float64
+		closest   *models.Player
+	)
+
+	for i, player := range players {
+		if player.Position == attackerPos {
+			continue
+		}
+
+		score := s.positionProximityScore(attackerPos, players[i].Position, models.SimilarPositions)
+		if score > bestScore {
+			bestScore = score
+			closest = &players[i]
+		}
+	}
+
+	return closest
+}
+
+func (s *SimulationState) opponentNearestTo(attackerPos models.PlayerPosition, opponents []models.Player) *models.Player {
 	var (
 		bestScore float64
 		closest   *models.Player
 	)
 
 	for i := range opponents {
-		score := s.positionProximityScore(attackerPos, opponents[i].Position)
+		score := s.positionProximityScore(attackerPos, opponents[i].Position, models.OpponentAdjacents)
 		if score > bestScore {
 			bestScore = score
 			closest = &opponents[i]
@@ -486,9 +592,38 @@ func (s *SimulationState) evaluateHold(player models.Player) bool {
 	return s.Simulation.RandomFloat() < successChance
 }
 
-func (s *SimulationState) makeDecision() Decision {
-	lastEvent := s.LastEvent()
-	player := lastEvent.FinishingPlayer
+func (s *SimulationState) evaluateShot(team models.Team, player models.Player) bool {
+	power := player.Technical.Shooting.Power
+	finishing := player.Technical.Shooting.Finishing
+	curve := player.Technical.Shooting.Curve
+	composure := player.Composure
+
+	finishingWeight := 0.3
+	powerWeight := 0.3
+	curveWeight := 0.2
+	composureWeight := 0.2
+
+	shotScore := float64(power)*powerWeight +
+		float64(finishing)*finishingWeight +
+		float64(curve)*curveWeight +
+		float64(composure)*composureWeight
+
+	if shotScore < 0 {
+		shotScore = 0
+	} else if shotScore > 100 {
+		shotScore = 100
+	}
+
+	normalized := (shotScore - 50) / 10
+	shotScore = helpers.Sigmoid(normalized)
+
+	shotScore /= 100.0
+
+	return s.Simulation.RandomFloat() < shotScore
+}
+
+func (s *SimulationState) makeDecision(event Event) Decision {
+	player := event.FinishingPlayer
 	if player == nil {
 		return NoDecision
 	}
@@ -529,16 +664,4 @@ func (s *SimulationState) decidePassType(vision float64) Decision {
 		return DecisionLongPass
 	}
 	return DecisionShortPass
-}
-
-func (s *SimulationState) logPass(e Event) {
-	fmt.Printf("(%s) %s passes to %s\n", s.Timestamp(), e.StartingPlayer.Name, e.FinishingPlayer.Name)
-}
-
-func (s *SimulationState) logDribble(e Event) {
-	fmt.Printf("(%s) %s is dribbling with the ball\n", s.Timestamp(), e.StartingPlayer.Name)
-}
-
-func (s *SimulationState) logInterception(e Event) {
-	fmt.Printf("(%s) %s loses the ball to %s\n", s.Timestamp(), e.StartingPlayer.Name, e.FinishingPlayer.Name)
 }

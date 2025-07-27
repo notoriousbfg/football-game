@@ -82,6 +82,10 @@ func (t *Team) SearchPlayers(options PlayerSearchOptions) Player {
 			score += 2
 		}
 
+		if t.Name == options.Name {
+			score += 2
+		}
+
 		if player.Number == options.Number {
 			score += 2
 		}

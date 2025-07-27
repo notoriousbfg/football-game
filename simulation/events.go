@@ -44,6 +44,15 @@ const (
 	ETGoalScoringChance
 	ETInterception
 	ETDribble
+	ETPossession
+	ETSave
+	ETGoal
+	ETMiss
+	ETCross
+	ETEndOfFirstHalf
+	ETEndOfFirstHalfExtraTime
+	ETEndOfSecondHalf
+	ETEndOfSecondHalfExtraTime
 )
 
 //go:generate stringer -type=Decision -output decision_string.go
