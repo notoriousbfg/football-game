@@ -169,7 +169,7 @@ func (p *Pitch) renderRow(team models.Team, templateName string, positions []mod
 	maps.Copy(originalExclusions, exclusions)
 	for i, position := range positions {
 		player := team.SearchPlayers(models.PlayerSearchOptions{
-			Position:   position,
+			Positions:  []models.PlayerPosition{position},
 			Exclusions: exclusions,
 		})
 		initials := player.Initials()

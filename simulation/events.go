@@ -53,6 +53,7 @@ const (
 	ETEndOfFirstHalfExtraTime
 	ETEndOfSecondHalf
 	ETEndOfSecondHalfExtraTime
+	ETReset
 )
 
 //go:generate stringer -type=Decision -output decision_string.go

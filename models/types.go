@@ -16,7 +16,7 @@ type Team struct {
 }
 
 type PlayerSearchOptions struct {
-	Position   PlayerPosition
+	Positions  []PlayerPosition
 	Name       string
 	Number     PlayerNumber
 	Exclusions map[PlayerNumber]string
@@ -29,14 +29,23 @@ func (t *Team) SearchPlayers(options PlayerSearchOptions) Player {
 	}
 
 	similarityWeights := make(map[PlayerPosition]float64)
-	similarityWeights[options.Position] = 2.0 // direct match
-
-	visited := map[PlayerPosition]bool{options.Position: true}
+	visited := make(map[PlayerPosition]bool)
 	queue := []struct {
 		Pos   PlayerPosition
 		Depth int
-	}{{options.Position, 0}}
+	}{}
 
+	// Initialize with all given positions
+	for _, pos := range options.Positions {
+		similarityWeights[pos] = 2.0 // direct match weight
+		visited[pos] = true
+		queue = append(queue, struct {
+			Pos   PlayerPosition
+			Depth int
+		}{pos, 0})
+	}
+
+	// BFS to explore similar positions up to depth 3
 	for len(queue) > 0 {
 		current := queue[0]
 		queue = queue[1:]
@@ -50,7 +59,6 @@ func (t *Team) SearchPlayers(options PlayerSearchOptions) Player {
 				visited[similar] = true
 
 				weight := map[int]float64{
-					0: 2.0,  // direct match
 					1: 1.0,  // 1st-degree similar
 					2: 0.5,  // 2nd-degree similar
 					3: 0.25, // 3rd-degree similar
@@ -100,7 +108,7 @@ func (t *Team) SearchPlayers(options PlayerSearchOptions) Player {
 	}
 
 	if highest == nil {
-		panic(fmt.Errorf("no player found with options (position: %s, exclusions: %+v)", options.Position.String(), options.Exclusions))
+		panic(fmt.Errorf("no player found with options (positions: %+v, exclusions: %+v)", options.Positions, options.Exclusions))
 	}
 
 	return highest.Player
@@ -243,6 +251,30 @@ var SimilarPositions = map[PlayerPosition][]PlayerPosition{
 	Striker:       {CentreForward, LeftWinger, RightWinger},
 }
 
+var TeammateAdjacents = map[PlayerPosition][]PlayerPosition{
+	Goalkeeper: {LeftCentreBack, RightCentreBack, LeftBack, RightBack},
+
+	RightBack:       {RightWingBack, RightCentreBack},
+	RightWingBack:   {RightBack, RightMidfielder, RightWinger},
+	RightMidfielder: {RightWingBack, RightWinger},
+	RightWinger:     {RightMidfielder, RightWingBack},
+
+	LeftCentreBack:  {CentralDefensiveMidfielder, RightCentreBack},
+	RightCentreBack: {CentralDefensiveMidfielder, LeftCentreBack},
+
+	LeftBack:       {LeftWingBack, LeftCentreBack},
+	LeftWingBack:   {LeftBack, LeftMidfielder, LeftWinger},
+	LeftMidfielder: {LeftWingBack, LeftWinger},
+	LeftWinger:     {LeftMidfielder, LeftWingBack},
+
+	CentralMidfielder:          {CentralDefensiveMidfielder, CentralAttackingMidfielder, CentralMidfielder},
+	CentralDefensiveMidfielder: {CentralMidfielder, LeftCentreBack, RightCentreBack, CentralAttackingMidfielder},
+	CentralAttackingMidfielder: {CentralMidfielder, CentreForward, Striker, LeftWinger, RightWinger},
+
+	CentreForward: {Striker, CentralAttackingMidfielder},
+	Striker:       {CentreForward, LeftWinger, RightWinger},
+}
+
 var OpponentAdjacents = map[PlayerPosition][]PlayerPosition{
 	Goalkeeper: {Striker, LeftWinger, RightWinger, CentreForward},
 
@@ -268,13 +300,14 @@ var OpponentAdjacents = map[PlayerPosition][]PlayerPosition{
 }
 
 type TechnicalSkill struct {
-	Speed     SpeedSkill
-	Passing   PassingSkill
-	Shooting  ShootingSkill
-	Defending DefendingSkill
-	Dribbling DribblingSkill
-	FreeKicks int
-	Penalties int
+	Speed       SpeedSkill
+	Passing     PassingSkill
+	Shooting    ShootingSkill
+	Defending   DefendingSkill
+	Dribbling   DribblingSkill
+	Goalkeeping GoalkeepingSkill
+	FreeKicks   int
+	Penalties   int
 }
 
 type SpeedSkill struct {
@@ -314,6 +347,12 @@ type DribblingSkill struct {
 	SkillMoves int
 	Agility    int
 	Dribbling  int
+}
+
+type GoalkeepingSkill struct {
+	Reflexes    int
+	Positioning int
+	Reactions   int
 }
 
 type TacticalIntelligence struct {
