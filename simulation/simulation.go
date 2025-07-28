@@ -16,39 +16,35 @@ type Simulation struct {
 	RandomFloat       func() float64
 	SynergyMultiplier int
 	TacticalCounters  map[int]TacticalCounter
-	EventTriggers     map[EventType]EventTrigger
 	Pitch             *Pitch
 }
 
 func (sim *Simulation) Run() {
+	done := make(chan struct{})
+
+	go func() {
+		sim.State.Listen()
+		close(done)
+	}()
+
 	sim.Pitch = NewPitch(&sim.Match)
 	sim.Pitch.Draw()
 
-	// halfSeconds := 45 * 60
-
-	// first half
 	sim.State.CaptureEvent(
 		sim.State.startingEvent(sim.KickoffTeam),
 	)
 
-	// sim.runPeriod(0, halfSeconds)
-	// sim.runPeriod(halfSeconds, sim.State.FirstHalfExtraTime)
+	sim.State.runGame()
 
-	// // second half
-	// sim.runPeriod(halfSeconds, halfSeconds)
-	// sim.runPeriod(halfSeconds, sim.State.SecondHalfExtraTime)
+	close(sim.State.EventQueue)
+
+	<-done
 
 	sim.State.Outcome = &Outcome{
 		HomeScore: sim.State.HomeScore,
 		AwayScore: sim.State.AwayScore,
 	}
 }
-
-// func (sim *Simulation) runPeriod(start, seconds int) {
-// 	for i := start; i <= start+seconds; i++ {
-// 		sim.State.Time = sim.State.Time.Add(time.Second)
-// 	}
-// }
 
 func (sim *Simulation) opposingTeam(team models.Team) models.Team {
 	if sim.Match.A.Name == team.Name {
@@ -73,9 +69,12 @@ func CreateSimulation(home, away models.Team) *Simulation {
 		AwayMomentum:      1.0,
 		HomeTeamAttacking: false,
 		AwayTeamAttacking: false,
-		Stalemate:         false,
+		FullTime:          false,
 		Events:            make([]Event, 0),
+		EventQueue:        make(chan Event, 100),
 	}
+
+	state.registerTriggers()
 
 	sim := &Simulation{
 		Match:             Match{H: home, A: away},
@@ -94,156 +93,61 @@ func CreateSimulation(home, away models.Team) *Simulation {
 		sim.KickoffTeam = away
 	}
 
-	sim.registerTriggers()
-
-	// triggers[HomeTeamAttacking] = func(e Event, s *SimulationState) {
-	// 	if s.evaluateAttack(e, randomFloat) {
-	// 		s.HomeScore++
-	// 		s.HomeMomentum += 0.1
-	// 		s.AwayMomentum -= 0.1
-	// 	}
-	// 	e.Log.log(s)
-	// }
-
-	// triggers[AwayTeamAttacking] = func(e Event, s *SimulationState) {
-	// 	if s.evaluateAttack(e, randomFloat) {
-	// 		s.AwayScore++
-	// 		s.AwayMomentum += 0.1
-	// 		s.HomeMomentum -= 0.1
-	// 	}
-	// 	e.Log.log(s)
-	// }
-
 	return sim
-}
-
-func (sim *Simulation) registerTriggers() {
-	sim.EventTriggers = make(map[EventType]EventTrigger)
-
-	sim.EventTriggers[ETEndOfFirstHalf] = func(e Event, s *SimulationState) {
-
-	}
-
-	sim.EventTriggers[ETPass] = func(e Event, s *SimulationState) {
-		s.Log.logPass(s, e)
-		s.Time = s.Time.Add(time.Second * 3)
-		s.CaptureEvent(
-			s.action(e),
-		)
-	}
-
-	sim.EventTriggers[ETCross] = func(e Event, s *SimulationState) {
-		s.Log.logCross(s, e)
-		s.Time = s.Time.Add(time.Second * 3)
-		s.CaptureEvent(
-			s.action(e),
-		)
-	}
-
-	sim.EventTriggers[ETDribble] = func(e Event, s *SimulationState) {
-		s.Log.logDribble(s, e)
-		s.Time = s.Time.Add(time.Second * 5)
-		s.CaptureEvent(
-			s.action(e),
-		)
-	}
-
-	sim.EventTriggers[ETGoal] = func(e Event, s *SimulationState) {
-		s.Log.logGoal(s, e)
-		s.Time = s.Time.Add(time.Minute * 2)
-		if s.isHome(e.Team) {
-			s.HomeScore++
-			s.HomeMomentum += 0.1
-		} else {
-			s.AwayScore++
-			s.AwayMomentum += 0.1
-		}
-		s.Log.logRestart(s)
-		s.CaptureEvent(
-			s.reset(e),
-		)
-	}
-
-	sim.EventTriggers[ETInterception] = func(e Event, s *SimulationState) {
-		s.Log.logInterception(s, e)
-		s.Time = s.Time.Add(time.Second * 3)
-		s.CaptureEvent(
-			s.action(e),
-		)
-	}
-
-	sim.EventTriggers[ETPossession] = func(e Event, s *SimulationState) {
-		s.Log.logPossession(s, e)
-		s.Time = s.Time.Add(time.Second * 3)
-		s.CaptureEvent(
-			s.action(e),
-		)
-	}
-
-	sim.EventTriggers[ETYellowCard] = func(e Event, s *SimulationState) {
-		s.Log.logYellowCard(s, e)
-		s.CaptureEvent(
-			s.freeKick(e),
-		)
-		s.Time = s.Time.Add(time.Second * 3)
-		if sim.State.isHome(e.Team) {
-			sim.State.HomeYellowCards++
-		} else {
-			sim.State.AwayYellowCards++
-		}
-	}
-
-	sim.EventTriggers[ETRedCard] = func(e Event, s *SimulationState) {
-		s.CaptureEvent(
-			s.freeKick(e),
-		)
-		if sim.State.isHome(e.Team) {
-			sim.State.HomeRedCards++
-		} else {
-			sim.State.HomeRedCards++
-		}
-	}
-
-	sim.EventTriggers[ETSave] = func(e Event, s *SimulationState) {
-		s.Log.logSave(s, e)
-		s.CaptureEvent(
-			s.goalKeeperKick(e),
-		)
-	}
-
 }
 
 // things that change
 type SimulationState struct {
-	Simulation          *Simulation
-	Start               time.Time
-	Time                time.Time
-	HomeScore           int
-	AwayScore           int
-	HomeYellowCards     int
-	AwayYellowCards     int
-	HomeRedCards        int
-	AwayRedCards        int
-	HomeMomentum        float64
-	AwayMomentum        float64
-	HomeTeamAttacking   bool
-	AwayTeamAttacking   bool
-	Stalemate           bool
-	FirstHalfExtraTime  time.Duration // seconds
-	SecondHalfExtraTime time.Duration // seconds
-	RandomFloat         func() float64
-	Events              []Event
-	Outcome             *Outcome
-	Log                 *Log
+	Simulation           *Simulation
+	Start                time.Time
+	Time                 time.Time
+	FirstHalfEnded       bool
+	FirstHalfExtraEnded  bool
+	SecondHalfStarted    bool
+	SecondHalfEnded      bool
+	SecondHalfExtraEnded bool
+	FullTime             bool
+	HomeScore            int
+	AwayScore            int
+	HomeYellowCards      int
+	AwayYellowCards      int
+	HomeRedCards         int
+	AwayRedCards         int
+	HomeMomentum         float64
+	AwayMomentum         float64
+	HomeTeamAttacking    bool
+	AwayTeamAttacking    bool
+	Stalemate            bool
+	FirstHalfExtraTime   time.Duration // seconds
+	SecondHalfExtraTime  time.Duration // seconds
+	RandomFloat          func() float64
+	Triggers             map[EventType]func(e Event)
+	EventQueue           chan Event
+	Events               []Event
+	Outcome              *Outcome
+}
+
+func (s *SimulationState) Listen() {
+	for event := range s.EventQueue {
+		s.Events = append(s.Events, event)
+		if trigger, exists := s.Triggers[event.Type]; exists {
+			trigger(event)
+		} else {
+			s.log(event)
+		}
+	}
 }
 
 func (s *SimulationState) CaptureEvent(e Event) {
-	s.Events = append(s.Events, e)
+	if s.FullTime {
+		return
+	}
 
-	if trigger, exists := s.Simulation.EventTriggers[e.Type]; exists {
-		trigger(e, s)
-	} else {
-		s.Log.logMissingTrigger(s, e)
+	select {
+	case s.EventQueue <- e:
+		// sent successfully
+	default:
+		// could log a warning if needed
 	}
 }
 
@@ -253,26 +157,177 @@ func (s *SimulationState) LastEvent() Event {
 
 func (s *SimulationState) Timestamp() string {
 	duration := s.Time.Sub(s.Start)
-
-	minutes := duration.Minutes()
-	if duration.Hours() > 0 {
-		minutes += duration.Hours() * 60
-	}
-
-	return fmt.Sprintf("%02d:%02d", int(minutes)%90, int(duration.Seconds())%60)
+	seconds := int(duration.Seconds()) % 60
+	return fmt.Sprintf("%02d:%02d", int(duration.Minutes()), seconds)
 }
 
-func (s *SimulationState) trackProgress() *Event {
-	if s.Time.After(s.Start.Add((time.Second * 90 * 60) + s.SecondHalfExtraTime)) {
-		return &Event{Type: ETEndOfSecondHalfExtraTime}
-	} else if s.Time.After(s.Start.Add(time.Second * 90 * 60)) {
-		return &Event{Type: ETEndOfSecondHalf}
-	} else if s.Time.After(s.Start.Add((time.Second * 45 * 60) + s.FirstHalfExtraTime)) {
-		return &Event{Type: ETEndOfFirstHalfExtraTime}
-	} else if s.Time.After(s.Start.Add((time.Second * 45 * 60))) {
-		return &Event{Type: ETEndOfFirstHalf}
+func (s *SimulationState) runGame() {
+	firstHalfDuration := 45 * time.Minute
+	secondHalfDuration := 45 * time.Minute
+
+	for !s.FullTime {
+		elapsed := s.Time.Sub(s.Start)
+
+		switch {
+		case !s.FirstHalfEnded && elapsed >= firstHalfDuration:
+			s.CaptureEvent(Event{Type: ETEndOfFirstHalf})
+			s.FirstHalfEnded = true
+		case s.FirstHalfEnded && !s.FirstHalfExtraEnded && elapsed >= firstHalfDuration+s.FirstHalfExtraTime:
+			s.CaptureEvent(Event{Type: ETEndOfFirstHalfExtraTime})
+			s.FirstHalfExtraEnded = true
+			s.SecondHalfStarted = true
+		case s.SecondHalfStarted && !s.SecondHalfEnded && elapsed >= firstHalfDuration+secondHalfDuration:
+			s.CaptureEvent(Event{Type: ETEndOfSecondHalf})
+			s.SecondHalfEnded = true
+		case s.SecondHalfEnded && !s.SecondHalfExtraEnded && elapsed >= firstHalfDuration+secondHalfDuration+s.SecondHalfExtraTime:
+			s.CaptureEvent(Event{Type: ETEndOfSecondHalfExtraTime})
+			s.SecondHalfExtraEnded = true
+			s.FullTime = true
+		}
 	}
-	return nil
+}
+
+func (s *SimulationState) registerTriggers() {
+	s.Triggers = make(map[EventType]func(e Event))
+	s.Triggers[ETEndOfFirstHalf] = func(e Event) {
+		s.log(e)
+	}
+	s.Triggers[ETEndOfFirstHalfExtraTime] = func(e Event) {
+		s.log(e)
+		// time is reset
+		s.Time = s.Start.Add(time.Minute * 45)
+	}
+	s.Triggers[ETEndOfSecondHalfExtraTime] = func(e Event) {
+		s.log(e)
+	}
+	s.Triggers[ETPass] = func(e Event) {
+		s.log(e)
+		s.Time = s.Time.Add(time.Second * 3)
+		s.CaptureEvent(
+			s.action(e),
+		)
+	}
+	s.Triggers[ETCross] = func(e Event) {
+		s.log(e)
+		s.Time = s.Time.Add(time.Second * 3)
+		s.CaptureEvent(
+			s.action(e),
+		)
+	}
+	s.Triggers[ETDribble] = func(e Event) {
+		s.log(e)
+		s.Time = s.Time.Add(time.Second * 5)
+		s.CaptureEvent(
+			s.action(e),
+		)
+	}
+	s.Triggers[ETGoal] = func(e Event) {
+		s.log(e)
+		s.Time = s.Time.Add(time.Minute * 2)
+		if s.isHome(e.Team) {
+			s.HomeScore++
+			s.HomeMomentum += 0.1
+		} else {
+			s.AwayScore++
+			s.AwayMomentum += 0.1
+		}
+		s.log(e)
+		s.CaptureEvent(
+			s.reset(e),
+		)
+	}
+	s.Triggers[ETInterception] = func(e Event) {
+		s.log(e)
+		s.Time = s.Time.Add(time.Second * 3)
+		s.CaptureEvent(
+			s.action(e),
+		)
+	}
+	s.Triggers[ETPossession] = func(e Event) {
+		s.log(e)
+		s.Time = s.Time.Add(time.Second * 3)
+		s.CaptureEvent(
+			s.action(e),
+		)
+	}
+	s.Triggers[ETYellowCard] = func(e Event) {
+		s.log(e)
+		s.CaptureEvent(
+			s.freeKick(e),
+		)
+		duration := time.Second * 3
+		s.Time = s.Time.Add(duration)
+		s.addExtraTime(duration)
+		if s.isHome(e.Team) {
+			s.HomeYellowCards++
+		} else {
+			s.AwayYellowCards++
+		}
+	}
+	s.Triggers[ETRedCard] = func(e Event) {
+		s.CaptureEvent(
+			s.freeKick(e),
+		)
+		duration := time.Second * 20
+		s.Time = s.Time.Add(duration)
+		s.addExtraTime(duration)
+		if s.isHome(e.Team) {
+			s.HomeRedCards++
+		} else {
+			s.HomeRedCards++
+		}
+	}
+	s.Triggers[ETSave] = func(e Event) {
+		s.log(e)
+		s.Time = s.Time.Add(time.Second * 5)
+		s.addExtraTime(time.Second * 1)
+		s.CaptureEvent(
+			s.goalKeeperKick(e),
+		)
+	}
+}
+
+func (s *SimulationState) addExtraTime(d time.Duration) {
+	if !s.FirstHalfEnded {
+		s.FirstHalfExtraTime += d
+	}
+	if s.SecondHalfStarted && !s.SecondHalfEnded {
+		s.SecondHalfExtraTime += d
+	}
+}
+
+func (s *SimulationState) log(e Event) {
+	switch e.Type {
+	case ETPass:
+		fmt.Printf("(%s) %s passes to %s\n", s.Timestamp(), e.StartingPlayer.Name, e.FinishingPlayer.Name)
+	case ETGoal:
+		fmt.Printf("(%s) %s shoots and scores!\n", s.Timestamp(), e.FinishingPlayer.Name)
+	case ETCross:
+		fmt.Printf("(%s) %s crosses to %s\n", s.Timestamp(), e.StartingPlayer.Name, e.FinishingPlayer.Name)
+	case ETDribble:
+		fmt.Printf("(%s) %s is dribbling with the ball\n", s.Timestamp(), e.StartingPlayer.Name)
+	case ETInterception:
+		fmt.Printf("(%s) %s loses the ball to %s\n", s.Timestamp(), e.StartingPlayer.Name, e.FinishingPlayer.Name)
+	case ETPossession:
+		fmt.Printf("(%s) %s has the ball\n", s.Timestamp(), e.FinishingPlayer.Name)
+	case ETYellowCard:
+		fmt.Printf("(%s) %s is given a yellow card for a foul\n", s.Timestamp(), e.FinishingPlayer.Name)
+	case ETRedCard:
+		fmt.Printf("(%s) %s is shown a red card for a bad foul\n", s.Timestamp(), e.FinishingPlayer.Name)
+	case ETSave:
+		fmt.Printf("(%s) %s took a shot but it was saved by %s\n", s.Timestamp(), e.StartingPlayer.Name, e.FinishingPlayer.Name)
+	case ETEndOfFirstHalf:
+		fmt.Printf("(%s) %d minutes extra time added in the first half\n", s.Timestamp(), int(s.FirstHalfExtraTime.Minutes()))
+	case ETEndOfFirstHalfExtraTime:
+		fmt.Printf("(%s) The whistle blows for the end of the first half\n", s.Timestamp())
+	case ETEndOfSecondHalf:
+		fmt.Printf("(%s) %d minutes extra time added in the second half\n", s.Timestamp(), int(s.SecondHalfExtraTime.Minutes()))
+	case ETEndOfSecondHalfExtraTime:
+		fmt.Printf("(%s) The full time whistle blows\n", s.Timestamp())
+		// case ETRestart:
+		// 	// Assuming this special case doesn't need a full Event object
+		// 	fmt.Printf("(%s) The game restarts.\n", s.Timestamp())
+	}
 }
 
 func (s *SimulationState) isHome(team models.Team) bool {
@@ -411,7 +466,7 @@ func (s *SimulationState) evaluateDecision(team models.Team, player *models.Play
 			return s.turnover(team, player)
 		}
 	case DecisionShoot:
-		if s.evaluateShot(team, *player) {
+		if s.evaluateShot(*player) {
 			return Event{
 				Type:            ETGoal,
 				Team:            team,
@@ -629,7 +684,7 @@ func (s *SimulationState) evaluateHold(player models.Player) bool {
 	return s.Simulation.RandomFloat() < successChance
 }
 
-func (s *SimulationState) evaluateShot(team models.Team, player models.Player) bool {
+func (s *SimulationState) evaluateShot(player models.Player) bool {
 	power := player.Technical.Shooting.Power
 	finishing := player.Technical.Shooting.Finishing
 	curve := player.Technical.Shooting.Curve
