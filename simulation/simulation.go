@@ -121,7 +121,6 @@ type SimulationState struct {
 	Stalemate            bool
 	FirstHalfExtraTime   time.Duration // seconds
 	SecondHalfExtraTime  time.Duration // seconds
-	RandomFloat          func() float64
 	Triggers             map[EventType]func(e Event)
 	EventQueue           chan Event
 	Events               []Event
@@ -454,31 +453,24 @@ func (s *SimulationState) evaluateDecision(team models.Team, player *models.Play
 	switch decision {
 	case DecisionLongPass:
 		if s.evaluateLongPass(team, *player) {
-			receivingPlayer := team.SearchPlayers(models.PlayerSearchOptions{
-				Positions:  []models.PlayerPosition{models.Striker, models.RightWinger, models.LeftWinger},
-				Exclusions: map[models.PlayerNumber]string{player.Number: player.Initials()},
-			})
+			receivingPlayer := team.ChooseReceiver(*player, s.underPressure(), true, s.Simulation.RandomFloat)
 			return Event{
 				Type:            ETPass,
 				Team:            team,
 				StartingPlayer:  player,
-				FinishingPlayer: &receivingPlayer,
+				FinishingPlayer: receivingPlayer,
 			}
 		} else {
 			return s.turnover(team, player)
 		}
 	case DecisionShortPass:
-		nearestPlayer := s.teamMateNearest(player.Position, team.Players)
-		receivingPlayer := team.SearchPlayers(models.PlayerSearchOptions{
-			Positions:  []models.PlayerPosition{nearestPlayer.Position},
-			Exclusions: map[models.PlayerNumber]string{player.Number: player.Initials()},
-		})
+		receivingPlayer := team.ChooseReceiver(*player, s.underPressure(), false, s.Simulation.RandomFloat)
 		if s.evaluateShortPass(*player) {
 			return Event{
 				Type:            ETPass,
 				Team:            team,
 				StartingPlayer:  player,
-				FinishingPlayer: &receivingPlayer,
+				FinishingPlayer: receivingPlayer,
 			}
 		} else {
 			return s.turnover(team, player)
@@ -653,35 +645,6 @@ func (s *SimulationState) evaluateDribble(player models.Player, opposingTeam mod
 	return s.Simulation.RandomFloat() < dribbleScore
 }
 
-func (s *SimulationState) positionProximityScore(playerPos, adjacentPos models.PlayerPosition, adjacents map[models.PlayerPosition][]models.PlayerPosition) float64 {
-	if playerPos == adjacentPos {
-		return 1.0
-	}
-
-	adjacentPositions, ok := adjacents[playerPos]
-	if !ok {
-		return 0.0
-	}
-
-	for _, pos := range adjacentPositions {
-		if pos == adjacentPos {
-			return 0.75
-		}
-	}
-
-	for _, adjPos := range adjacentPositions {
-		secondDegreePositions, ok := adjacents[adjPos]
-		if !ok {
-			continue
-		}
-		if slices.Contains(secondDegreePositions, adjacentPos) {
-			return 0.5
-		}
-	}
-
-	return 0.0
-}
-
 func (s *SimulationState) teamMateNearest(attackerPos models.PlayerPosition, players []models.Player) *models.Player {
 	var (
 		bestScore float64
@@ -693,7 +656,33 @@ func (s *SimulationState) teamMateNearest(attackerPos models.PlayerPosition, pla
 			continue
 		}
 
-		score := s.positionProximityScore(attackerPos, players[i].Position, models.TeammateAdjacents)
+		score := func() float64 {
+			if attackerPos == players[i].Position {
+				return 1.0
+			}
+
+			adjacentPositions, ok := models.TeammateAdjacents[attackerPos]
+			if !ok {
+				return 0.0
+			}
+
+			if slices.Contains(adjacentPositions, players[i].Position) {
+				return 0.75
+			}
+
+			for _, adjPos := range adjacentPositions {
+				secondDegreePositions, ok := models.TeammateAdjacents[adjPos]
+				if !ok {
+					continue
+				}
+				if slices.Contains(secondDegreePositions, players[i].Position) {
+					return 0.5
+				}
+			}
+
+			return 0.0
+		}()
+
 		if score > bestScore {
 			bestScore = score
 			closest = &players[i]
@@ -710,7 +699,29 @@ func (s *SimulationState) opponentNearestTo(attackerPos models.PlayerPosition, o
 	)
 
 	for i := range opponents {
-		score := s.positionProximityScore(attackerPos, opponents[i].Position, models.OpponentAdjacents)
+		score := func() float64 {
+			adjacentPositions, ok := models.OpponentAdjacents[attackerPos]
+			if !ok {
+				return 0.0
+			}
+
+			if slices.Contains(adjacentPositions, opponents[i].Position) {
+				return 0.75
+			}
+
+			for _, adjPos := range adjacentPositions {
+				secondDegreePositions, ok := models.OpponentAdjacents[adjPos]
+				if !ok {
+					continue
+				}
+				if slices.Contains(secondDegreePositions, opponents[i].Position) {
+					return 0.5
+				}
+			}
+
+			return 0.0
+		}()
+
 		if score > bestScore {
 			bestScore = score
 			closest = &opponents[i]
@@ -830,4 +841,8 @@ func (s *SimulationState) decidePassType(player models.Player) Decision {
 		return DecisionLongPass
 	}
 	return DecisionShortPass
+}
+
+func (s *SimulationState) underPressure() bool {
+	return s.Simulation.RandomFloat() < 0.5
 }
